@@ -37,7 +37,7 @@ you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 * the tool downloads only the files which don't exists in the download folder
 * if there is new file for download in a release then it's downloaded
 * *LastID* value in config file is increasing after every download
-
+* program is looping after reaching newest ID
 
 have a nice day :)
 

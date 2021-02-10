@@ -620,7 +620,15 @@ func DownloadRelease(release Release) {
 		if release.ReleasedAt == "" {
 			release.ReleasedAt = config.NoCompoDirectory
 		}
-		dir := cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
+		var dir string
+		if len(release.ReleasedBy) > 0 {
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
+		} else if len(release.Credits) > 0 {
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.Credits[0] + sep + release.ReleaseName
+		} else {
+			dir = cacheDir + sep + release.ReleasedAt + sep + "unknown" + sep + release.ReleaseName
+		}
+
 		dir = filepath.Clean(dir)
 		dir = strings.ReplaceAll(dir, "...", "")
 

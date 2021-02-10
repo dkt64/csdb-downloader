@@ -40,5 +40,5 @@ you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 
 have a nice day :)
 
-*dkt*
-### 2021 @ samar productions
+*dkt/smr*
+### Samar Productions in Feb 2021

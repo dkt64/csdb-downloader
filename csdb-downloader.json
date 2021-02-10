@@ -1,0 +1,22 @@
+{
+ "DownloadDirectory": "csdb",
+ "NoCompoDirectory": "!out_of_compo",
+ "LastID": 199887,
+ "Date": "",
+ "Types": [
+  "C64 Music",
+  "C64 Graphics",
+  "C64 Demo",
+  "C64 One-File Demo",
+  "C64 Intro",
+  "C64 4K Intro",
+  "C64 Crack intro",
+  "C64 Music Collection",
+  "C64 Graphics Collection",
+  "C64 Diskmag",
+  "C64 Charts",
+  "C64 Invitation",
+  "C64 1K Intro",
+  "C64 Fake Demo"
+ ]
+}

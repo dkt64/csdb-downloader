@@ -1,6 +1,6 @@
 # csdb-downloader
 
-**csdb-downloader** is a commandline tool to download and organize csdb releases on your storage
+**csdb-downloader** is a commandline program to download and organize csdb releases on your storage
 
 **csdb-downloader.json** is a config file for setup (it's created during first run with some default settings):
 * *DownloadDirectory* - place where it will download the files (f.e. your USB stick)
@@ -33,8 +33,8 @@
 you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 
 **notes**
-* date parameter is only for comparing the dates, the tool will not start downloading from provided date, id number is the primary selector
-* the tool downloads only the files which don't exists in the download folder
+* date parameter is only for comparing the dates, program will not start downloading from provided date, id number is the primary selector
+* program downloads only the files which don't exists in the download folder
 * if there is new file for download in a release then it's downloaded
 * *LastID* value in config file is increasing after every download
 * program is looping after reaching newest ID

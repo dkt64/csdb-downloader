@@ -519,7 +519,9 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 							newRelease.ReleaseType = entry.ReleaseType
 							newRelease.ReleasedAt = entry.XMLReleasedAt.XMLEvent.Name
 
-							if newRelease.ReleaseYear >= parsedDate.Year() && newRelease.ReleaseMonth >= int(parsedDate.Month()) && newRelease.ReleaseDay >= parsedDate.Day() {
+							relDate := time.Date(newRelease.ReleaseYear, time.Month(newRelease.ReleaseMonth), newRelease.ReleaseDay, 0, 0, 0, 0, time.Local)
+
+							if relDate.After(parsedDate) {
 								if len(entry.UsedSIDs) == 1 {
 									newRelease.SIDPath = entry.UsedSIDs[0].HVSCPath
 								}

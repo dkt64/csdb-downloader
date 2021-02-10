@@ -38,7 +38,9 @@ you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 * if there is new file for download in a release then it's downloaded
 * *LastID* value in config file is increasing after every download
 
+
 have a nice day :)
 
 *dkt/smr*
-### Samar Productions in Feb 2021
+
+__Samar Productions in Feb 2021__

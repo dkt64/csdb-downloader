@@ -13,6 +13,7 @@
 * *goback* - how many IDs to go back with downloading/checking -> update of config.LastID
 * *startingID* - force ID number to start from -> update of config.LastID
 * *date* - download only releases newer then date in form YYYY-MM-DD -> update of config.Date
+* *loop* - makes the program to loop forever (instant updates in background)
 
 **default release types** (demoscene mode):
 * C64 Music
@@ -37,8 +38,6 @@ you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 * program downloads only the files which don't exists in the download folder
 * if there is new file for download in a release then it's downloaded
 * *LastID* value in config file is increasing after every download
-* program is looping after reaching newest ID (release)
-* new loop commandline option added (src)
 
 have a nice day :)
 

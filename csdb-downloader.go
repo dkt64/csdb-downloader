@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -221,7 +222,7 @@ func ReadConfig() {
 // ================================================================================================
 func WriteConfig() {
 	file, _ := json.MarshalIndent(config, "", " ")
-	_ = ioutil.WriteFile("csdb-downloader.json", file, 0666)
+	_ = ioutil.WriteFile("csdb-downloader.json", file, 0777)
 }
 
 // fileExists - sprawdzenie czy plik istnieje
@@ -309,7 +310,7 @@ func DownloadFile(path string, filename string, url string) error {
 	var err error
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.MkdirAll(path, 0666)
+		os.MkdirAll(path, 0777)
 	}
 	if err != nil {
 		return err
@@ -670,6 +671,8 @@ func main() {
 
 	flag.Parse()
 
+	syscall.Umask(0)
+
 	// Info powitalne
 	//
 	fmt.Println("==========================================")
@@ -685,7 +688,7 @@ func main() {
 		ReadConfig()
 	} else {
 		config.DownloadDirectory = "csdb"
-		config.NoCompoDirectory = "!out_of_compo"
+		config.NoCompoDirectory = "out_of_compo"
 		config.LastID = 0
 		config.Types = []string{"C64 Music", "C64 Graphics", "C64 Demo", "C64 One-File Demo", "C64 Intro", "C64 4K Intro", "C64 Crack intro", "C64 Music Collection", "C64 Graphics Collection", "C64 Diskmag", "C64 Charts", "C64 Invitation", "C64 1K Intro", "C64 Fake Demo"}
 	}

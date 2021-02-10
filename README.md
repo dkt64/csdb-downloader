@@ -1,7 +1,7 @@
 # csdb-downloader
-## dkt / samar productions 2021
+### samar productions 2021
 
-**csdb-downloader** is a command line tool to download and organize csdb releases on your strorage. 
+**csdb-downloader** is a command line tool to download and organize csdb releases on your strorage
 
 it uses *config.json* file for setup (it's created during first run with default settings):
 - *DownloadDirectory* - place where it will download the files (f.e. your USB stick)

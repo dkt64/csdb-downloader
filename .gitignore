@@ -9,5 +9,6 @@
 *.prg
 *.d64
 *.zip
+*.json
 bin/
 csdb_news/

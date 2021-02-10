@@ -43,4 +43,4 @@ have a nice day :)
 
 *dkt/smr*
 
-__Samar Productions in Feb 2021__
+__Samar Productions / Feb 2021__

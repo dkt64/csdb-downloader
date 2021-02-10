@@ -703,11 +703,16 @@ func main() {
 		*date = config.Date
 	}
 
-	// Start pętli
 	WriteConfig()
+
+	// Wykonanie pierwszy raz
+	CSDBPrepareData(*gobackID, *startingID, *date)
+	WriteConfig()
+	fmt.Println("Sleeping for minute...")
+	time.Sleep(time.Minute)
+	// Start pętli
 	for {
-		ReadConfig()
-		CSDBPrepareData(*gobackID, *startingID, *date)
+		CSDBPrepareData(0, 0, *date)
 		WriteConfig()
 		fmt.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)

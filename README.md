@@ -1,5 +1,4 @@
 # csdb-downloader
-### samar productions 2021
 
 **csdb-downloader** is a commandline tool to download and organize csdb releases on your storage
 
@@ -41,4 +40,5 @@ you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 
 have a nice day :)
 
-*dkt/smr*
+*dkt*
+### 2021 @ samar productions

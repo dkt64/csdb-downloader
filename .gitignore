@@ -1,0 +1,13 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.sid
+*.prg
+*.d64
+*.zip
+bin/
+csdb_news/

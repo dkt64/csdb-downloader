@@ -1,10 +1,13 @@
-// ================================================================================================
+// [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+// ------------------------------------------------------------------------------------------------
 // csdb downloader by DKT/Samar
-// ================================================================================================
+// ------------------------------------------------------------------------------------------------
+// [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
@@ -12,6 +15,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,16 +24,14 @@ import (
 )
 
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
-
+// ------------------------------------------------------------------------------------------------
 // Zmienne globalne
-
+// ------------------------------------------------------------------------------------------------
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
-
-const historyMaxMonths = 3
-const historyMaxEntries = 100
 
 var cacheDir string
 var sep string
+var fullDownload bool
 
 // RssItem - pojednyczy wpis w XML
 // ------------------------------------------------------------------------------------------------
@@ -159,7 +161,9 @@ var releases []Release
 type Config struct {
 	DownloadDirectory string
 	NoCompoDirectory  string
-	// LastDownloadedID  int
+	LastID            int
+	// HistoryYear       int
+	// HistoryMonth      int
 }
 
 // releases - glówna i globalna tablica z aktualnymi produkcjami
@@ -167,9 +171,9 @@ type Config struct {
 var config Config
 
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
-
+// ------------------------------------------------------------------------------------------------
 // Funkcje
-
+// ------------------------------------------------------------------------------------------------
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 
 // ErrCheck - obsługa błedów
@@ -191,19 +195,19 @@ func ErrCheck2(errNr error) bool {
 	return true
 }
 
-// ReadDb - Odczyt bazy
-// ================================================================================================
-func ReadDb() {
-	file, _ := ioutil.ReadFile("releases.json")
-	_ = json.Unmarshal([]byte(file), &releases)
-}
+// // ReadDb - Odczyt bazy
+// // ================================================================================================
+// func ReadDb() {
+// 	file, _ := ioutil.ReadFile("releases.json")
+// 	_ = json.Unmarshal([]byte(file), &releases)
+// }
 
-// WriteDb - Zapis bazy
-// ================================================================================================
-func WriteDb() {
-	file, _ := json.MarshalIndent(releases, "", " ")
-	_ = ioutil.WriteFile("releases.json", file, 0666)
-}
+// // WriteDb - Zapis bazy
+// // ================================================================================================
+// func WriteDb() {
+// 	file, _ := json.MarshalIndent(releases, "", " ")
+// 	_ = ioutil.WriteFile("releases.json", file, 0666)
+// }
 
 // ReadConfig - Odczyt konfiguracji
 // ================================================================================================
@@ -230,60 +234,60 @@ func fileExists(filename string) bool {
 	return true
 }
 
-// Sortowanie datami
-// ================================================================================================
+// // Sortowanie datami
+// // ================================================================================================
 
-type byDate []Release
+// type byDate []Release
 
-func (s byDate) Len() int {
-	return len(s)
-}
-func (s byDate) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s byDate) Less(i, j int) bool {
+// func (s byDate) Len() int {
+// 	return len(s)
+// }
+// func (s byDate) Swap(i, j int) {
+// 	s[i], s[j] = s[j], s[i]
+// }
+// func (s byDate) Less(i, j int) bool {
 
-	d1 := time.Date(s[i].ReleaseYear, time.Month(s[i].ReleaseMonth), s[i].ReleaseDay, 0, 0, 0, 0, time.Local)
-	d2 := time.Date(s[j].ReleaseYear, time.Month(s[j].ReleaseMonth), s[j].ReleaseDay, 0, 0, 0, 0, time.Local)
+// 	d1 := time.Date(s[i].ReleaseYear, time.Month(s[i].ReleaseMonth), s[i].ReleaseDay, 0, 0, 0, 0, time.Local)
+// 	d2 := time.Date(s[j].ReleaseYear, time.Month(s[j].ReleaseMonth), s[j].ReleaseDay, 0, 0, 0, 0, time.Local)
 
-	return d2.Before(d1)
-}
+// 	return d2.Before(d1)
+// }
 
-// Sortowanie byID
-// ================================================================================================
+// // Sortowanie byID
+// // ================================================================================================
 
-type byID []Release
+// type byID []Release
 
-func (s byID) Len() int {
-	return len(s)
-}
-func (s byID) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s byID) Less(i, j int) bool {
-	return s[i].ReleaseID > s[j].ReleaseID
-}
+// func (s byID) Len() int {
+// 	return len(s)
+// }
+// func (s byID) Swap(i, j int) {
+// 	s[i], s[j] = s[j], s[i]
+// }
+// func (s byID) Less(i, j int) bool {
+// 	return s[i].ReleaseID > s[j].ReleaseID
+// }
 
-// Sortowanie datami i ID
-// ================================================================================================
+// // Sortowanie datami i ID
+// // ================================================================================================
 
-type byDateAndID []Release
+// type byDateAndID []Release
 
-func (s byDateAndID) Len() int {
-	return len(s)
-}
-func (s byDateAndID) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s byDateAndID) Less(i, j int) bool {
+// func (s byDateAndID) Len() int {
+// 	return len(s)
+// }
+// func (s byDateAndID) Swap(i, j int) {
+// 	s[i], s[j] = s[j], s[i]
+// }
+// func (s byDateAndID) Less(i, j int) bool {
 
-	d1 := time.Date(s[i].ReleaseYear, time.Month(s[i].ReleaseMonth), s[i].ReleaseDay, 0, 0, 0, 0, time.Local)
-	d2 := time.Date(s[j].ReleaseYear, time.Month(s[j].ReleaseMonth), s[j].ReleaseDay, 0, 0, 0, 0, time.Local)
-	id1 := s[i].ReleaseID
-	id2 := s[j].ReleaseID
+// 	d1 := time.Date(s[i].ReleaseYear, time.Month(s[i].ReleaseMonth), s[i].ReleaseDay, 0, 0, 0, 0, time.Local)
+// 	d2 := time.Date(s[j].ReleaseYear, time.Month(s[j].ReleaseMonth), s[j].ReleaseDay, 0, 0, 0, 0, time.Local)
+// 	id1 := s[i].ReleaseID
+// 	id2 := s[j].ReleaseID
 
-	return d2.Before(d1) && id1 > id2
-}
+// 	return d2.Before(d1) && id1 > id2
+// }
 
 // fileExists - sprawdzenie czy plik istnieje
 // ================================================================================================
@@ -312,7 +316,8 @@ func DownloadFile(path string, filename string, url string) error {
 
 	filepath := path + sep + filename
 
-	fmt.Println("Downloading file " + filepath + " from " + url)
+	fmt.Println("Downloading new file " + url)
+	fmt.Println("Writing to " + filepath)
 
 	httpClient := http.Client{
 		Timeout: time.Second * 5, // Timeout after 5 seconds
@@ -337,6 +342,39 @@ func DownloadFile(path string, filename string, url string) error {
 		return err
 	}
 	out.Close()
+
+	if strings.Contains(strings.ToLower(filename), ".zip") {
+		zipReader, err := zip.OpenReader(filepath)
+		if ErrCheck(err) {
+			defer zipReader.Close()
+			for _, file := range zipReader.File {
+
+				fmt.Println("Extracting from ZIP: " + file.Name)
+				if !file.FileInfo().IsDir() {
+
+					outputFile, err := os.OpenFile(
+						path+sep+file.Name,
+						os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+						file.Mode(),
+					)
+					if ErrCheck(err) {
+						defer outputFile.Close()
+
+						// fmt.Println("Opening: " + file.Name)
+						// fmt.Println("Output: " + path + sep + file.Name)
+
+						zippedFile, err := file.Open()
+						if ErrCheck(err) {
+							defer zippedFile.Close()
+							fmt.Println("Writing extracted file " + path + sep + file.Name)
+							_, err = io.Copy(outputFile, zippedFile)
+							ErrCheck(err)
+						}
+					}
+				}
+			}
+		}
+	}
 
 	// Sprawdzzamy rozmiar pliku
 	// fi, err := os.Stat(filepath)
@@ -364,12 +402,13 @@ func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 
 // CSDBPrepareData - Wątek odczygtujący wszystkie releasy z csdb
 // ================================================================================================
-func CSDBPrepareData() {
+func CSDBPrepareData(full bool) {
 
-	lastDate := time.Now().AddDate(0, -historyMaxMonths, 0)
+	// lastDate := time.Now().AddDate(0, -historyMaxMonths, 0)
+	// lastDate := time.Date(config.HistoryYear, time.Month(config.HistoryMonth), 1, 0, 0, 0, 0, time.Local)
 
+	// pobranie ostatniego release'u
 	netClient := &http.Client{Timeout: time.Second * 10}
-
 	resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=0")
 
 	if ErrCheck(err) {
@@ -389,21 +428,27 @@ func CSDBPrepareData() {
 		err = decoder.Decode(&entry)
 		ErrCheck(err)
 
-		// fmt.Println("===================================")
-		fmt.Println("Najwyższy numer ID wynosi " + strconv.Itoa(entry.ID))
+		newestCSDbID := entry.ID
 
-		foundNewReleases := 0
-		id := entry.ID
+		if config.LastID == 0 {
+			config.LastID = newestCSDbID - 64
+			fmt.Println("Running for a first time, downloading 64 last releases. Change your config.json file to adjust the number.")
+		}
+		lastDownloadedID := config.LastID
 
-		fmt.Print("Checking releases ")
+		fmt.Println("Checking...")
+		fmt.Println("Newest ID on CSDb is " + strconv.Itoa(newestCSDbID))
+		fmt.Println("Latest downloaded ID is " + strconv.Itoa(lastDownloadedID))
 
-		for foundNewReleases < historyMaxEntries {
+		// zaczynamy od ostatniego zawsze, nawet jeżeli robimy tylko update bo może ktoś update'ował dane
+		checkingID := lastDownloadedID
 
-			resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=" + strconv.Itoa(id))
+		searching := true
+		for searching {
 
-			// fmt.Println("ID " + strconv.Itoa(id))
+			resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=" + strconv.Itoa(checkingID))
 
-			id--
+			fmt.Println("ID " + strconv.Itoa(checkingID))
 
 			if ErrCheck(err) {
 				defer resp.Body.Close()
@@ -435,15 +480,18 @@ func CSDBPrepareData() {
 							}
 						}
 
-						prodYear, _ := strconv.Atoi(entry.ReleaseYear)
-						prodMonth, _ := strconv.Atoi(entry.ReleaseMonth)
-						prodDay, _ := strconv.Atoi(entry.ReleaseDay)
-						prodTime := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 0, time.Local)
+						// prodYear, _ := strconv.Atoi(entry.ReleaseYear)
+						// prodMonth, _ := strconv.Atoi(entry.ReleaseMonth)
+						// prodDay, _ := strconv.Atoi(entry.ReleaseDay)
+						// prodTime := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 0, time.Local)
 
-						// TODO zrobić update tych info (ktoś mógł uzupełnić potem dane lub pliki)
-						// Jeżeli znaleźliśmy to sprawdzamy typ i dodajemy
-						//
-						if typeOK && prodTime.After(lastDate) {
+						// Sprawdzamy czy doszliśmy do max daty
+						// if !prodTime.After(lastDate) {
+						// 	fmt.Println("Update finished (date reached)")
+						// 	searching = false
+						// } else {
+						// sprawdzamy typ
+						if typeOK {
 
 							// Tworzymy nowy obiekt release który dodamy do slice
 							//
@@ -463,13 +511,13 @@ func CSDBPrepareData() {
 								newRelease.SIDPath = entry.UsedSIDs[0].HVSCPath
 							}
 
-							// fmt.Println("[CSDBPrepareData] Entry name: " + entry.ReleaseName)
+							fmt.Println("Entry name: " + entry.ReleaseName)
 							// fmt.Println("ID:     ", entry.ReleaseID)
-							// fmt.Println("Typ:    ", entry.ReleaseType)
+							fmt.Println("Type: " + entry.ReleaseType)
 							// fmt.Println("Event:  ", entry.XMLReleasedAt.XMLEvent.Name)
 
 							for _, group := range entry.XMLReleasedBy.XMLGroup {
-								// fmt.Println("XMLGroup:  ", group.Name)
+								fmt.Println("Released by: " + group.Name)
 								newRelease.ReleasedBy = append(newRelease.ReleasedBy, group.Name)
 							}
 							for _, handle := range entry.XMLReleasedBy.XMLHandle {
@@ -481,95 +529,54 @@ func CSDBPrepareData() {
 							// Najpierw SIDy
 
 							for _, link := range entry.DownloadLinks {
-								newRelease.DownloadLinks = append(newRelease.DownloadLinks, link.Link)
+								newLink, _ := url.PathUnescape(link.Link)
+								// fmt.Println("Download link: " + newLink)
+								newRelease.DownloadLinks = append(newRelease.DownloadLinks, newLink)
 							}
 
 							//
 							// Dodajemy
 							//
 							if len(newRelease.DownloadLinks) > 0 {
-								releases = append(releases, newRelease)
-								foundNewReleases++
-								fmt.Print(".")
+								// releases = append(releases, newRelease)
+								DownloadRelease(newRelease)
+								config.LastID = checkingID
+								WriteConfig()
+
+								// sprawdzamy czy przerwać ściąganie
+								if !full && checkingID == newestCSDbID {
+									fmt.Println("Update finished")
+									searching = false
+								}
 							}
+							// }
 						}
 					}
 				} else {
 					fmt.Println("Błąd komunikacji z csdb.dk")
-					break
 				}
 			} else {
 				fmt.Println("Błąd komunikacji z csdb.dk")
 				break
 			}
 
+			if checkingID < newestCSDbID {
+				checkingID++
+			} else {
+				searching = false
+			}
 		}
-
-		fmt.Println(" finish")
-
-		// fmt.Println("Found " + strconv.Itoa(foundNewReleases) + " releases")
-
-		WriteDb()
 
 	} else {
 		fmt.Println("Błąd komunikacji z csdb.dk")
 	}
 
+	WriteConfig()
 }
 
-// [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
-
-// MAIN()
-
-// [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
-
-func main() {
-
-	// Info powitalne
-	//
-	fmt.Println("==========================================")
-	fmt.Println("=======          APP START        ========")
-	fmt.Println("==========================================")
-
-	sep = string(os.PathSeparator)
-
-	//
-	// Odczyt Configa
-	//
-	if fileExists("config.json") {
-		ReadConfig()
-	} else {
-		config.DownloadDirectory = "csdb_news"
-		config.NoCompoDirectory = "!out_of_compo"
-		WriteConfig()
-	}
-
-	cacheDir = config.DownloadDirectory
-
-	fmt.Println("Your download directory is " + cacheDir)
-	// fmt.Println("Last downloaded ID was " + strconv.Itoa(config.LastDownloadedID))
-
-	// //
-	// // Odczyt Db
-	// //
-
-	// ReadDb()
-
-	// httpClient := http.Client{
-	// 	Timeout: time.Second * 5, // Timeout after 5 seconds
-	// }
-
-	// resp, httpErr := httpClient.Get("https://sidcloud.net/api/v1/csdb_releases")
-	// ErrCheck(httpErr)
-
-	// body, readErr := ioutil.ReadAll(resp.Body)
-	// ErrCheck(readErr)
-
-	// unmarshalErr := json.Unmarshal(body, &releases)
-	// ErrCheck(unmarshalErr)
-
-	CSDBPrepareData()
-
+// DownloadFiles - Ściągnięcie plików
+// ================================================================================================
+func DownloadFiles() {
 	for i := len(releases) - 1; i >= 0; i-- {
 		// for _, release := range releases {
 		release := releases[i]
@@ -601,5 +608,78 @@ func main() {
 		}
 		// }
 	}
+}
 
+// DownloadRelease - Ściągnięcie pojedynczego release'u i zapisanie
+// ================================================================================================
+func DownloadRelease(release Release) {
+	for _, downloadLink := range release.DownloadLinks {
+		filename := filepath.Base(downloadLink)
+		filename = filepath.Clean(filename)
+		filename = strings.ReplaceAll(filename, "...", "")
+		if release.ReleasedAt == "" {
+			release.ReleasedAt = config.NoCompoDirectory
+		}
+		dir := cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
+		dir = filepath.Clean(dir)
+		dir = strings.ReplaceAll(dir, "...", "")
+
+		if !fileExists(dir + sep + filename) {
+			err := DownloadFile(dir, filename, downloadLink)
+			if err == nil {
+				// fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
+				// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
+				// config.LastDownloadedID = release.ReleaseID
+				// WriteConfig()
+			}
+		} else {
+			// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
+		}
+	}
+}
+
+// [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+// ------------------------------------------------------------------------------------------------
+// MAIN()
+// ------------------------------------------------------------------------------------------------
+// [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+
+func main() {
+
+	// Info powitalne
+	//
+	fmt.Println("==========================================")
+	fmt.Println("=======          APP START        ========")
+	fmt.Println("==========================================")
+
+	if len(os.Args) > 1 {
+		sFullDownload := os.Args[1]
+		if sFullDownload == "full" {
+			fullDownload = true
+		}
+	}
+
+	sep = string(os.PathSeparator)
+
+	//
+	// Odczyt Configa
+	//
+	if fileExists("config.json") {
+		ReadConfig()
+	} else {
+		config.DownloadDirectory = "csdb_news"
+		config.NoCompoDirectory = "!out_of_compo"
+		config.LastID = 0
+		WriteConfig()
+	}
+
+	cacheDir = config.DownloadDirectory
+
+	fmt.Println("Your download directory is " + cacheDir)
+
+	for {
+		CSDBPrepareData(fullDownload)
+		fmt.Println("Sleeping for 1 minute...")
+		time.Sleep(time.Minute)
+	}
 }

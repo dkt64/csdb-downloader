@@ -17,3 +17,6 @@
 *.prg
 *.d64
 *.zip
+
+bin/
+csdb_news/

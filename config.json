@@ -1,4 +1,5 @@
 {
- "DownloadDirectory": "f:/!csdb_news",
- "NoCompoDirectory": "!out_of_compo"
+ "DownloadDirectory": "csdb_news",
+ "NoCompoDirectory": "!out_of_compo",
+ "LastID": 199861
 }

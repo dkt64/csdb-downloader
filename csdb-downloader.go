@@ -670,13 +670,14 @@ func main() {
 	gobackID := flag.Int("goback", 0, "How many IDs go back for updates -> change of config.LastID")
 	startingID := flag.Int("start", 0, "Force ID number to start from -> change of config.LastID")
 	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
+	looping := flag.Bool("loop", false, "Set to 'true' if you want to loop the program (default 'false')")
 
 	flag.Parse()
 
 	// Info powitalne
 	//
 	fmt.Println("==========================================")
-	fmt.Println("=======          APP START        ========")
+	fmt.Println("=======         APP START         ========")
 	fmt.Println("==========================================")
 
 	sep = string(os.PathSeparator)
@@ -708,13 +709,16 @@ func main() {
 	// Wykonanie pierwszy raz
 	CSDBPrepareData(*gobackID, *startingID, *date)
 	WriteConfig()
-	fmt.Println("Sleeping for minute...")
-	time.Sleep(time.Minute)
+
 	// Start pętli
-	for {
-		CSDBPrepareData(0, 0, *date)
-		WriteConfig()
+	for *looping {
 		fmt.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)
+		CSDBPrepareData(*gobackID, *startingID, *date)
+		WriteConfig()
 	}
+
+	fmt.Println("==========================================")
+	fmt.Println("=======          APP END.         ========")
+	fmt.Println("==========================================")
 }

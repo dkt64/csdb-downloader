@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -222,7 +221,7 @@ func ReadConfig() {
 // ================================================================================================
 func WriteConfig() {
 	file, _ := json.MarshalIndent(config, "", " ")
-	_ = ioutil.WriteFile("csdb-downloader.json", file, 0777)
+	_ = ioutil.WriteFile("csdb-downloader.json", file, 0666)
 }
 
 // fileExists - sprawdzenie czy plik istnieje
@@ -311,6 +310,7 @@ func DownloadFile(path string, filename string, url string) error {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		os.MkdirAll(path, 0777)
+		os.Chmod(path, 0777)
 	}
 	if err != nil {
 		return err
@@ -670,8 +670,6 @@ func main() {
 	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
 
 	flag.Parse()
-
-	syscall.Umask(0)
 
 	// Info powitalne
 	//

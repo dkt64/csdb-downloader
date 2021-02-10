@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -162,8 +163,7 @@ type Config struct {
 	DownloadDirectory string
 	NoCompoDirectory  string
 	LastID            int
-	// HistoryYear       int
-	// HistoryMonth      int
+	Date              string
 }
 
 // releases - glówna i globalna tablica z aktualnymi produkcjami
@@ -400,15 +400,19 @@ func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 	// return nil, fmt.Errorf("Unknown charset: %s", charset)
 }
 
-// CSDBPrepareData - Wątek odczygtujący wszystkie releasy z csdb
+// CSDBPrepareData - parametry (gobackID, startingID, date) - Wątek odczygtujący wszystkie releasy z csdb
 // ================================================================================================
-func CSDBPrepareData(full bool) {
+func CSDBPrepareData(gobackID int, startingID int, date string) {
+
+	// fmt.Println(*date)
+	parsedDate, _ := time.Parse("2006-01-02", date)
+	// fmt.Println(parsedDate)
 
 	// lastDate := time.Now().AddDate(0, -historyMaxMonths, 0)
 	// lastDate := time.Date(config.HistoryYear, time.Month(config.HistoryMonth), 1, 0, 0, 0, 0, time.Local)
 
 	// pobranie ostatniego release'u
-	netClient := &http.Client{Timeout: time.Second * 10}
+	netClient := &http.Client{Timeout: time.Second * 5}
 	resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=0")
 
 	if ErrCheck(err) {
@@ -428,17 +432,24 @@ func CSDBPrepareData(full bool) {
 		err = decoder.Decode(&entry)
 		ErrCheck(err)
 
+		// ustalenie od którego zaczynamy
 		newestCSDbID := entry.ID
-
-		if config.LastID == 0 {
+		if config.LastID == 0 && gobackID == 0 {
 			config.LastID = newestCSDbID - 64
-			fmt.Println("Running for a first time, downloading 64 last releases. Change your config.json file to adjust the number.")
+			fmt.Println("Running for a first time, downloading 64 last releases. Change your config.json file to adjust the number or use parameters.")
 		}
+		if gobackID > 0 {
+			config.LastID = newestCSDbID - gobackID
+		}
+		if startingID > 0 {
+			config.LastID = startingID
+		}
+
 		lastDownloadedID := config.LastID
 
 		fmt.Println("Checking...")
 		fmt.Println("Newest ID on CSDb is " + strconv.Itoa(newestCSDbID))
-		fmt.Println("Latest downloaded ID is " + strconv.Itoa(lastDownloadedID))
+		fmt.Println("Starting with ID " + strconv.Itoa(lastDownloadedID))
 
 		// zaczynamy od ostatniego zawsze, nawet jeżeli robimy tylko update bo może ktoś update'ował dane
 		checkingID := lastDownloadedID
@@ -507,71 +518,73 @@ func CSDBPrepareData(full bool) {
 							newRelease.ReleaseType = entry.ReleaseType
 							newRelease.ReleasedAt = entry.XMLReleasedAt.XMLEvent.Name
 
-							if len(entry.UsedSIDs) == 1 {
-								newRelease.SIDPath = entry.UsedSIDs[0].HVSCPath
-							}
-
-							fmt.Println("Entry name: " + entry.ReleaseName)
-							// fmt.Println("ID:     ", entry.ReleaseID)
-							fmt.Println("Type: " + entry.ReleaseType)
-							// fmt.Println("Event:  ", entry.XMLReleasedAt.XMLEvent.Name)
-
-							for _, group := range entry.XMLReleasedBy.XMLGroup {
-								fmt.Println("Released by: " + group.Name)
-								newRelease.ReleasedBy = append(newRelease.ReleasedBy, group.Name)
-							}
-							for _, handle := range entry.XMLReleasedBy.XMLHandle {
-								// fmt.Println("XMLHandle: ", handle.XMLHandle)
-								newRelease.ReleasedBy = append(newRelease.ReleasedBy, handle.XMLHandle)
-							}
-
-							// Linki dościągnięcia
-							// Najpierw SIDy
-
-							for _, link := range entry.DownloadLinks {
-								newLink, _ := url.PathUnescape(link.Link)
-								// fmt.Println("Download link: " + newLink)
-								newRelease.DownloadLinks = append(newRelease.DownloadLinks, newLink)
-							}
-
-							//
-							// Dodajemy
-							//
-							if len(newRelease.DownloadLinks) > 0 {
-								// releases = append(releases, newRelease)
-								DownloadRelease(newRelease)
-								config.LastID = checkingID
-								WriteConfig()
-
-								// sprawdzamy czy przerwać ściąganie
-								if !full && checkingID == newestCSDbID {
-									fmt.Println("Update finished")
-									searching = false
+							if newRelease.ReleaseYear >= parsedDate.Year() && newRelease.ReleaseMonth >= int(parsedDate.Month()) && newRelease.ReleaseDay >= parsedDate.Day() {
+								if len(entry.UsedSIDs) == 1 {
+									newRelease.SIDPath = entry.UsedSIDs[0].HVSCPath
 								}
+
+								fmt.Println("Entry name: " + entry.ReleaseName)
+								// fmt.Println("ID:     ", entry.ReleaseID)
+								fmt.Println("Type: " + entry.ReleaseType)
+								// fmt.Println("Event:  ", entry.XMLReleasedAt.XMLEvent.Name)
+
+								for _, group := range entry.XMLReleasedBy.XMLGroup {
+									fmt.Println("Released by: " + group.Name)
+									newRelease.ReleasedBy = append(newRelease.ReleasedBy, group.Name)
+								}
+								for _, handle := range entry.XMLReleasedBy.XMLHandle {
+									// fmt.Println("XMLHandle: ", handle.XMLHandle)
+									newRelease.ReleasedBy = append(newRelease.ReleasedBy, handle.XMLHandle)
+								}
+
+								// Linki dościągnięcia
+								// Najpierw SIDy
+
+								for _, link := range entry.DownloadLinks {
+									newLink, _ := url.PathUnescape(link.Link)
+									// fmt.Println("Download link: " + newLink)
+									newRelease.DownloadLinks = append(newRelease.DownloadLinks, newLink)
+								}
+
+								//
+								// Dodajemy
+								//
+								if len(newRelease.DownloadLinks) > 0 {
+									// releases = append(releases, newRelease)
+									DownloadRelease(newRelease)
+									config.LastID = checkingID
+									// Update konfiga (LastID) po każdym sprawdzeniu
+									WriteConfig()
+								}
+
 							}
-							// }
 						}
 					}
 				} else {
-					fmt.Println("Błąd komunikacji z csdb.dk")
+					fmt.Println("csdb.dk communication error")
 				}
 			} else {
-				fmt.Println("Błąd komunikacji z csdb.dk")
+				fmt.Println("csdb.dk communication error")
 				break
 			}
 
 			if checkingID < newestCSDbID {
 				checkingID++
+				config.LastID = checkingID
+
+				// Update konfiga (LastID) po każdym sprawdzeniu
+				WriteConfig()
 			} else {
 				searching = false
 			}
+
+			// Odpoczynek
+			time.Sleep(time.Millisecond * 200)
 		}
 
 	} else {
-		fmt.Println("Błąd komunikacji z csdb.dk")
+		fmt.Println("csdb.dk communication error")
 	}
-
-	WriteConfig()
 }
 
 // DownloadFiles - Ściągnięcie plików
@@ -654,18 +667,17 @@ func DownloadRelease(release Release) {
 
 func main() {
 
+	gobackID := flag.Int("goback", 0, "How many IDs go back for updates -> change of config.LastID")
+	startingID := flag.Int("start", 0, "Force ID number to start from -> change of config.LastID")
+	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
+
+	flag.Parse()
+
 	// Info powitalne
 	//
 	fmt.Println("==========================================")
 	fmt.Println("=======          APP START        ========")
 	fmt.Println("==========================================")
-
-	if len(os.Args) > 1 {
-		sFullDownload := os.Args[1]
-		if sFullDownload == "full" {
-			fullDownload = true
-		}
-	}
 
 	sep = string(os.PathSeparator)
 
@@ -678,16 +690,25 @@ func main() {
 		config.DownloadDirectory = "csdb_news"
 		config.NoCompoDirectory = "!out_of_compo"
 		config.LastID = 0
-		WriteConfig()
 	}
 
 	cacheDir = config.DownloadDirectory
+	fmt.Println("Download directory: " + cacheDir)
 
-	fmt.Println("Your download directory is " + cacheDir)
+	// Czy podalismy datę?
+	if *date != "" {
+		config.Date = *date
+	} else {
+		*date = config.Date
+	}
 
+	// Start pętli
+	WriteConfig()
 	for {
-		CSDBPrepareData(fullDownload)
-		fmt.Println("Sleeping for 1 minute...")
+		ReadConfig()
+		CSDBPrepareData(*gobackID, *startingID, *date)
+		WriteConfig()
+		fmt.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)
 	}
 }

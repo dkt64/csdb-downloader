@@ -2,6 +2,8 @@
 // ------------------------------------------------------------------------------------------------
 // csdb downloader by DKT/Samar
 // ------------------------------------------------------------------------------------------------
+// TODO:
+// - display date with ID nr
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 
 package main
@@ -22,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gookit/color"
 )
 
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
@@ -461,8 +465,6 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 
 			resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=" + strconv.Itoa(checkingID))
 
-			fmt.Println("ID " + strconv.Itoa(checkingID))
-
 			if ErrCheck(err) {
 				defer resp.Body.Close()
 				body, err := ioutil.ReadAll(resp.Body)
@@ -481,9 +483,10 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 					err = decoder.Decode(&entry)
 					if ErrCheck2(err) {
 
+						// prodTime := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 0, time.Local)
+
 						// Szukamy takiego release w naszej bazie
 						//
-
 						typeOK := false
 						for _, relType := range config.Types {
 							if relType == entry.ReleaseType {
@@ -492,17 +495,32 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 							}
 						}
 
-						// prodYear, _ := strconv.Atoi(entry.ReleaseYear)
-						// prodMonth, _ := strconv.Atoi(entry.ReleaseMonth)
-						// prodDay, _ := strconv.Atoi(entry.ReleaseDay)
-						// prodTime := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 0, time.Local)
+						// Info
+						prodYear, _ := strconv.Atoi(entry.ReleaseYear)
+						prodMonth, _ := strconv.Atoi(entry.ReleaseMonth)
+						prodDay, _ := strconv.Atoi(entry.ReleaseDay)
 
-						// Sprawdzamy czy doszliśmy do max daty
-						// if !prodTime.After(lastDate) {
-						// 	fmt.Println("Update finished (date reached)")
-						// 	searching = false
-						// } else {
-						// sprawdzamy typ
+						if prodYear == 0 {
+							prodYear = 1982
+						}
+						if prodMonth == 0 {
+							prodMonth = 1
+						}
+						if prodDay == 0 {
+							prodDay = 1
+						}
+
+						noDate := prodYear == 1982 && prodMonth == 1 && prodDay == 1
+						relDate := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 0, time.Local)
+						dateProvided := date == ""
+
+						if typeOK {
+							color.Light.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
+						} else {
+							color.Secondary.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
+						}
+
+						// Jeżeli typ OK to działamy dalej
 						if typeOK {
 
 							// Tworzymy nowy obiekt release który dodamy do slice
@@ -513,15 +531,13 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 							newRelease.ReleaseName = entry.ReleaseName
 							newRelease.ReleaseScreenShot = entry.ReleaseScreenShot
 							newRelease.Rating = entry.Rating
-							newRelease.ReleaseYear, _ = strconv.Atoi(entry.ReleaseYear)
-							newRelease.ReleaseMonth, _ = strconv.Atoi(entry.ReleaseMonth)
-							newRelease.ReleaseDay, _ = strconv.Atoi(entry.ReleaseDay)
+							newRelease.ReleaseYear = prodYear
+							newRelease.ReleaseMonth = prodMonth
+							newRelease.ReleaseDay = prodDay
 							newRelease.ReleaseType = entry.ReleaseType
 							newRelease.ReleasedAt = entry.XMLReleasedAt.XMLEvent.Name
 
-							relDate := time.Date(newRelease.ReleaseYear, time.Month(newRelease.ReleaseMonth), newRelease.ReleaseDay, 0, 0, 0, 0, time.Local)
-
-							if relDate.After(parsedDate) {
+							if relDate.After(parsedDate) || (noDate && dateProvided) {
 								if len(entry.UsedSIDs) == 1 {
 									newRelease.SIDPath = entry.UsedSIDs[0].HVSCPath
 								}

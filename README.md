@@ -10,9 +10,9 @@
 * *Types* - download only listed types of releases
 
 **Command-line** options:
-* *goback* - how many IDs to go back with downloading/checking -> update of config.LastID
-* *startingID* - force ID number to start from -> update of config.LastID
-* *date* - download only releases newer then date in form YYYY-MM-DD -> update of config.Date (!)
+* *goback* - how many IDs to go back with downloading/checking -> updates config.LastID
+* *start* - force ID number to start from -> updates config.LastID
+* *date* - download only releases newer then date in form YYYY-MM-DD -> updates config.Date (!)
 * *loop* - use it make the program loop forever (sleep for 1 minute after checking)
 
 Use -help option to get info in command-line

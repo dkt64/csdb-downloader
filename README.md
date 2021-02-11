@@ -57,7 +57,7 @@ This one will download all last 1400 releases (IDs) together with all findings f
 
 ```csdb-downloader-win64.exe -goback=1400 --date=1980-01-01```
 
-Have a nice day :)
+**Have a nice day :)**
 
 *dkt*
 

@@ -9,15 +9,15 @@
 * *Date* - download only releases newer then provided date (download all if empty)
 * *Types* - download only listed types of releases
 
-**commandline** options:
+**Command-line** options:
 * *goback* - how many IDs to go back with downloading/checking -> update of config.LastID
 * *startingID* - force ID number to start from -> update of config.LastID
 * *date* - download only releases newer then date in form YYYY-MM-DD -> update of config.Date (!)
 * *loop* - use it make the program loop forever (sleep for 1 minute after checking)
 
-use -help option to get info in command-line
+Use -help option to get info in command-line
 
-**default release types** (demoscene mode):
+**Default release types** (demoscene mode):
 * C64 Music
 * C64 Graphics
 * C64 Demo
@@ -33,30 +33,32 @@ use -help option to get info in command-line
 * C64 1K Intro 
 * C64 Fake Demo
 
-you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
+You can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 
-**notes**
+**Notes**
 * date parameter is only for comparing the dates, program will not start downloading from provided date, id number is the primary selector
 * program downloads only the files which don't exists in the download folder
 * if there is new file for download in a release then it's downloaded
 * *LastID* value in config file is increasing after every download
 
-**example**
+**Example**
 
-today is 2021-02-11 and newest ID is 199902 (Seraphim by The Solution) - https://csdb.dk/release/?id=199902
+If today's 2021-02-11 and newest ID is 199902 (Seraphim by The Solution)
+- https://csdb.dk/release/?id=199902
 
-if you would like to go back to the beginning of the year 2021 you should go back with ~1400 releases (198502) - https://csdb.dk/release/?id=198502
+If you would like to go back to the beginning of the year 2021 you should go back with ~1400 releases (198502)
+- https://csdb.dk/release/?id=198502
 
-this will download all last 1400 releases (IDs) released after 2021-01-01:
+Command below will download all last 1400 releases (IDs) released after 2021-01-01:
 
 ```csdb-downloader-win64.exe -goback=1400 --date=2021-01-01```
 
-this will download all last 1400 releases (IDs) together with all findings from the past:
+This one will download all last 1400 releases (IDs) together with all findings from the past:
 
 ```csdb-downloader-win64.exe -goback=1400 --date=1980-01-01```
 
-have a nice day :)
+Have a nice day :)
 
-*dkt/smr*
+*dkt*
 
 __Samar Productions / Feb 2021__

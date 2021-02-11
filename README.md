@@ -41,7 +41,8 @@ you can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
 * if there is new file for download in a release then it's downloaded
 * *LastID* value in config file is increasing after every download
 
-**Example**
+**example**
+
 today is 2021-02-11 and newest ID is 199902 (Seraphim by The Solution) - https://csdb.dk/release/?id=199902
 if you would like to go back to the beginning of the year 2021 you should go back with ~1400 releases (198502) - https://csdb.dk/release/?id=198502
 

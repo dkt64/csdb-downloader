@@ -33,7 +33,7 @@ Use -help option to get info in command-line
 * C64 1K Intro 
 * C64 Fake Demo
 
-You can adjust the list for your own interests f.e. "C64 Crack" or "Tool"
+You can adjust the list for your own interests f.e. "C64 Crack", "C64 Tool" or maybe "Other Platform C64 Tool"...
 
 **Notes**
 * date parameter is only for comparing the dates, program will not start downloading from provided date, id number is the primary selector

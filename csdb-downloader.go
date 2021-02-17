@@ -3,7 +3,7 @@
 // csdb downloader by DKT/Samar
 // ------------------------------------------------------------------------------------------------
 // TODO:
-// - display date with ID nr
+// - put the output file to ALL the groups releasing the stuff (now i write to ReleasedBy[0])
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 
 package main

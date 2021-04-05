@@ -36,7 +36,6 @@ import (
 
 var cacheDir string
 var sep string
-var fullDownload bool
 
 // RssItem - pojednyczy wpis w XML
 // ------------------------------------------------------------------------------------------------
@@ -159,7 +158,7 @@ type Release struct {
 
 // releases - glówna i globalna tablica z aktualnymi produkcjami
 // ================================================================================================
-var releases []Release
+// var releases []Release
 
 // Config - info o ostatniej ściągniętej produkcji
 // ================================================================================================
@@ -194,10 +193,7 @@ func ErrCheck(errNr error) bool {
 // ErrCheck2 - obsługa błedów bez komunikatu
 // ================================================================================================
 func ErrCheck2(errNr error) bool {
-	if errNr != nil {
-		return false
-	}
-	return true
+	return errNr == nil
 }
 
 // // ReadDb - Odczyt bazy
@@ -294,16 +290,16 @@ func fileExists(filename string) bool {
 // 	return d2.Before(d1) && id1 > id2
 // }
 
-// fileExists - sprawdzenie czy plik istnieje
-// ================================================================================================
-func fileSize(filename string) (int64, error) {
-	// Sprawdzamy rozmiar pliku
-	fileStat, err := os.Stat(filename)
-	if ErrCheck(err) {
-		return fileStat.Size(), err
-	}
-	return fileStat.Size(), err
-}
+// // fileExists - sprawdzenie czy plik istnieje
+// // ================================================================================================
+// func fileSize(filename string) (int64, error) {
+// 	// Sprawdzamy rozmiar pliku
+// 	fileStat, err := os.Stat(filename)
+// 	if ErrCheck(err) {
+// 		return fileStat.Size(), err
+// 	}
+// 	return fileStat.Size(), err
+// }
 
 // DownloadFile will download a url to a local file. It's efficient because it will
 // write as it downloads and not load the whole file into memory.
@@ -603,41 +599,42 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 	}
 }
 
-// DownloadFiles - Ściągnięcie plików
-// ================================================================================================
-func DownloadFiles() {
-	for i := len(releases) - 1; i >= 0; i-- {
-		// for _, release := range releases {
-		release := releases[i]
-		// fmt.Println(release)
-		// if release.ReleaseID > config.LastDownloadedID {
-		// news
-		for _, downloadLink := range release.DownloadLinks {
-			filename := filepath.Base(downloadLink)
-			filename = filepath.Clean(filename)
-			filename = strings.ReplaceAll(filename, "...", "")
-			if release.ReleasedAt == "" {
-				release.ReleasedAt = config.NoCompoDirectory
-			}
-			dir := cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
-			dir = filepath.Clean(dir)
-			dir = strings.ReplaceAll(dir, "...", "")
+// // DownloadFiles - Ściągnięcie plików
+// // ================================================================================================
+// func DownloadFiles() {
+// 	for i := len(releases) - 1; i >= 0; i-- {
+// 		// for _, release := range releases {
+// 		release := releases[i]
+// 		// fmt.Println(release)
+// 		// if release.ReleaseID > config.LastDownloadedID {
+// 		// news
+// 		for _, downloadLink := range release.DownloadLinks {
+// 			filename := filepath.Base(downloadLink)
+// 			filename = filepath.Clean(filename)
+// 			filename = strings.ReplaceAll(filename, "...", "")
+// 			if release.ReleasedAt == "" {
+// 				release.ReleasedAt = config.NoCompoDirectory
+// 			}
+// 			dir := cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
+// 			dir = filepath.Clean(dir)
+// 			dir = strings.ReplaceAll(dir, "...", "")
 
-			if !fileExists(dir + sep + filename) {
-				err := DownloadFile(dir, filename, downloadLink)
-				if err == nil {
-					fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
-					// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
-					// config.LastDownloadedID = release.ReleaseID
-					// WriteConfig()
-				}
-			} else {
-				// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
-			}
-		}
-		// }
-	}
-}
+// 			if !fileExists(dir + sep + filename) {
+// 				err := DownloadFile(dir, filename, downloadLink)
+// 				if err == nil {
+// 					fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
+// 					// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
+// 					// config.LastDownloadedID = release.ReleaseID
+// 					// WriteConfig()
+// 				}
+// 			} 
+// 			// else {
+// 			// 	// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
+// 			// }
+// 		}
+// 		// }
+// 	}
+// }
 
 // DownloadRelease - Ściągnięcie pojedynczego release'u i zapisanie
 // ================================================================================================
@@ -651,27 +648,29 @@ func DownloadRelease(release Release) {
 		}
 		var dir string
 		if len(release.ReleasedBy) > 0 {
-			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + release.ReleasedBy[0] + sep + release.ReleaseName
 		} else if len(release.Credits) > 0 {
-			dir = cacheDir + sep + release.ReleasedAt + sep + release.Credits[0] + sep + release.ReleaseName
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + release.Credits[0] + sep + release.ReleaseName
 		} else {
-			dir = cacheDir + sep + release.ReleasedAt + sep + "unknown" + sep + release.ReleaseName
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + "unknown" + sep + release.ReleaseName
 		}
 
 		dir = filepath.Clean(dir)
 		dir = strings.ReplaceAll(dir, "...", "")
 
 		if !fileExists(dir + sep + filename) {
-			err := DownloadFile(dir, filename, downloadLink)
-			if err == nil {
-				// fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
-				// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
-				// config.LastDownloadedID = release.ReleaseID
-				// WriteConfig()
-			}
-		} else {
-			// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
+			DownloadFile(dir, filename, downloadLink)
+			// err := DownloadFile(dir, filename, downloadLink)
+			// if err == nil {
+			// 	// fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
+			// 	// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
+			// 	// config.LastDownloadedID = release.ReleaseID
+			// 	// WriteConfig()
+			// }
 		}
+		// else {
+		// 	// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
+		// }
 	}
 }
 

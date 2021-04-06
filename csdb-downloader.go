@@ -511,7 +511,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 						dateProvided := date == ""
 
 						if typeOK {
-							color.Light.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
+							color.LightGreen.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
 						} else {
 							color.Secondary.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
 						}
@@ -627,7 +627,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 // 					// config.LastDownloadedID = release.ReleaseID
 // 					// WriteConfig()
 // 				}
-// 			} 
+// 			}
 // 			// else {
 // 			// 	// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
 // 			// }

@@ -13,7 +13,7 @@
 * *goback* - how many IDs to go back with downloading/checking -> updates config.LastID
 * *start* - force ID number to start from -> updates config.LastID
 * *date* - download only releases newer then date in form YYYY-MM-DD -> updates config.Date (!)
-* *loop* - use it make the program loop forever (sleep for 1 minute after checking)
+* *loop* - use this option to make the program loop forever (sleep for 1 minute after checking)
 
 Use -help option to get info in command-line
 
@@ -36,9 +36,9 @@ Use -help option to get info in command-line
 You can adjust the list for your own interests f.e. "C64 Crack", "C64 Tool" or maybe "Other Platform C64 Tool"...
 
 **Notes**
-* date parameter is only for comparing the dates, program will not start downloading from provided date, id number is the primary selector
+* date parameter is only for comparing the dates, program will not start downloading from provided date, ID number is the primary selector
 * program downloads only the files which don't exists in the download folder
-* if there is new file for download in a release then it's downloaded
+* if there is new file for download in a release then it will be downloaded
 * *LastID* value in config file is increasing after every download
 
 **Example**
@@ -56,6 +56,10 @@ Command below will download all last 1400 releases (IDs) released after 2021-01-
 This one will download all last 1400 releases (IDs) together with all findings from the past:
 
 ```csdb-downloader-win64.exe -goback=1400 --date=1980-01-01```
+
+This one will download all releases since 2021-01-01:
+
+```csdb-downloader-win64.exe --start=198535 --date=2021-01-01```
 
 **Have a nice day :)**
 

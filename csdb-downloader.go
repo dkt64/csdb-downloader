@@ -14,9 +14,9 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"flag"
-	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -184,7 +184,7 @@ var config Config
 // ================================================================================================
 func ErrCheck(errNr error) bool {
 	if errNr != nil {
-		fmt.Println(errNr)
+		log.Println(errNr)
 		return false
 	}
 	return true
@@ -318,8 +318,8 @@ func DownloadFile(path string, filename string, url string) error {
 
 	filepath := path + sep + filename
 
-	fmt.Println("Downloading new file " + url)
-	fmt.Println("Writing to " + filepath)
+	log.Println("Downloading new file " + url)
+	log.Println("Writing to " + filepath)
 
 	httpClient := http.Client{
 		Timeout: time.Second * 5, // Timeout after 5 seconds
@@ -351,7 +351,7 @@ func DownloadFile(path string, filename string, url string) error {
 			defer zipReader.Close()
 			for _, file := range zipReader.File {
 
-				fmt.Println("Extracting from ZIP: " + file.Name)
+				log.Println("Extracting from ZIP: " + file.Name)
 				if !file.FileInfo().IsDir() {
 
 					outputFile, err := os.OpenFile(
@@ -362,13 +362,13 @@ func DownloadFile(path string, filename string, url string) error {
 					if ErrCheck(err) {
 						defer outputFile.Close()
 
-						// fmt.Println("Opening: " + file.Name)
-						// fmt.Println("Output: " + path + sep + file.Name)
+						// log.Println("Opening: " + file.Name)
+						// log.Println("Output: " + path + sep + file.Name)
 
 						zippedFile, err := file.Open()
 						if ErrCheck(err) {
 							defer zippedFile.Close()
-							fmt.Println("Writing extracted file " + path + sep + file.Name)
+							log.Println("Writing extracted file " + path + sep + file.Name)
 							_, err = io.Copy(outputFile, zippedFile)
 							ErrCheck(err)
 						}
@@ -385,7 +385,7 @@ func DownloadFile(path string, filename string, url string) error {
 	// }
 	// get the size
 	// size := fi.Size()
-	// fmt.Println("Downloaded the file with size of " + strconv.Itoa(int(size)) + " bytes.")
+	// log.Println("Downloaded the file with size of " + strconv.Itoa(int(size)) + " bytes.")
 
 	return err
 }
@@ -406,9 +406,9 @@ func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 // ================================================================================================
 func CSDBPrepareData(gobackID int, startingID int, date string) {
 
-	// fmt.Println(*date)
+	// log.Println(*date)
 	parsedDate, _ := time.Parse("2006-01-02", date)
-	// fmt.Println(parsedDate)
+	// log.Println(parsedDate)
 
 	// lastDate := time.Now().AddDate(0, -historyMaxMonths, 0)
 	// lastDate := time.Date(config.HistoryYear, time.Month(config.HistoryMonth), 1, 0, 0, 0, 0, time.Local)
@@ -422,7 +422,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		ErrCheck(err)
-		// fmt.Println(string(body))
+		// log.Println(string(body))
 		resp.Body.Close()
 
 		// Przerobienie na strukturę
@@ -438,7 +438,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 		newestCSDbID := entry.ID
 		if config.LastID == 0 && gobackID == 0 {
 			config.LastID = newestCSDbID - 64
-			fmt.Println("Running for a first time, downloading 64 last releases. Change your config.json file to adjust the number or use parameters.")
+			log.Println("Running for a first time, downloading 64 last releases. Change your config.json file to adjust the number or use parameters.")
 		}
 		if gobackID > 0 {
 			config.LastID = newestCSDbID - gobackID
@@ -449,9 +449,9 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 
 		lastDownloadedID := config.LastID
 
-		fmt.Println("Checking...")
-		fmt.Println("Newest ID on CSDb is " + strconv.Itoa(newestCSDbID))
-		fmt.Println("Starting with ID " + strconv.Itoa(lastDownloadedID))
+		log.Println("Checking...")
+		log.Println("Newest ID on CSDb is " + strconv.Itoa(newestCSDbID))
+		log.Println("Starting with ID " + strconv.Itoa(lastDownloadedID))
 
 		// zaczynamy od ostatniego zawsze, nawet jeżeli robimy tylko update bo może ktoś update'ował dane
 		checkingID := lastDownloadedID
@@ -468,7 +468,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 
 				if ErrCheck(err) {
 					resp.Body.Close()
-					// fmt.Println(string(body))
+					// log.Println(string(body))
 
 					// Przerobienie na strukturę
 
@@ -538,17 +538,17 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 									newRelease.SIDPath = entry.UsedSIDs[0].HVSCPath
 								}
 
-								fmt.Println("Entry name: " + entry.ReleaseName)
-								// fmt.Println("ID:     ", entry.ReleaseID)
-								fmt.Println("Type: " + entry.ReleaseType)
-								// fmt.Println("Event:  ", entry.XMLReleasedAt.XMLEvent.Name)
+								log.Println("Entry name: " + entry.ReleaseName)
+								// log.Println("ID:     ", entry.ReleaseID)
+								log.Println("Type: " + entry.ReleaseType)
+								// log.Println("Event:  ", entry.XMLReleasedAt.XMLEvent.Name)
 
 								for _, group := range entry.XMLReleasedBy.XMLGroup {
-									fmt.Println("Released by: " + group.Name)
+									log.Println("Released by: " + group.Name)
 									newRelease.ReleasedBy = append(newRelease.ReleasedBy, group.Name)
 								}
 								for _, handle := range entry.XMLReleasedBy.XMLHandle {
-									// fmt.Println("XMLHandle: ", handle.XMLHandle)
+									// log.Println("XMLHandle: ", handle.XMLHandle)
 									newRelease.ReleasedBy = append(newRelease.ReleasedBy, handle.XMLHandle)
 								}
 
@@ -557,7 +557,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 
 								for _, link := range entry.DownloadLinks {
 									newLink, _ := url.PathUnescape(link.Link)
-									// fmt.Println("Download link: " + newLink)
+									// log.Println("Download link: " + newLink)
 									newRelease.DownloadLinks = append(newRelease.DownloadLinks, newLink)
 								}
 
@@ -576,10 +576,10 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 						}
 					}
 				} else {
-					fmt.Println("csdb.dk communication error")
+					log.Println("csdb.dk communication error")
 				}
 			} else {
-				fmt.Println("csdb.dk communication error")
+				log.Println("csdb.dk communication error")
 				break
 			}
 
@@ -595,7 +595,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 		}
 
 	} else {
-		fmt.Println("csdb.dk communication error")
+		log.Println("csdb.dk communication error")
 	}
 }
 
@@ -605,7 +605,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 // 	for i := len(releases) - 1; i >= 0; i-- {
 // 		// for _, release := range releases {
 // 		release := releases[i]
-// 		// fmt.Println(release)
+// 		// log.Println(release)
 // 		// if release.ReleaseID > config.LastDownloadedID {
 // 		// news
 // 		for _, downloadLink := range release.DownloadLinks {
@@ -622,14 +622,14 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 // 			if !fileExists(dir + sep + filename) {
 // 				err := DownloadFile(dir, filename, downloadLink)
 // 				if err == nil {
-// 					fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
-// 					// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
+// 					log.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
+// 					// log.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
 // 					// config.LastDownloadedID = release.ReleaseID
 // 					// WriteConfig()
 // 				}
 // 			}
 // 			// else {
-// 			// 	// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
+// 			// 	// log.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
 // 			// }
 // 		}
 // 		// }
@@ -662,14 +662,14 @@ func DownloadRelease(release Release) {
 			DownloadFile(dir, filename, downloadLink)
 			// err := DownloadFile(dir, filename, downloadLink)
 			// if err == nil {
-			// 	// fmt.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
-			// 	// fmt.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
+			// 	// log.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
+			// 	// log.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
 			// 	// config.LastDownloadedID = release.ReleaseID
 			// 	// WriteConfig()
 			// }
 		}
 		// else {
-		// 	// fmt.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
+		// 	// log.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
 		// }
 	}
 }
@@ -689,11 +689,18 @@ func main() {
 
 	flag.Parse()
 
+	//
+	// Logowanie do pliku
+	//
+	logFileApp, err := os.OpenFile("app.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	ErrCheck(err)
+	log.SetOutput(io.MultiWriter(os.Stdout, logFileApp))
+
 	// Info powitalne
 	//
-	fmt.Println("==========================================")
-	fmt.Println("=======         APP START         ========")
-	fmt.Println("==========================================")
+	log.Println("==========================================")
+	log.Println("=======         APP START         ========")
+	log.Println("==========================================")
 
 	sep = string(os.PathSeparator)
 
@@ -710,7 +717,7 @@ func main() {
 	}
 
 	cacheDir = config.DownloadDirectory
-	fmt.Println("Download directory: " + cacheDir)
+	log.Println("Download directory: " + cacheDir)
 
 	// Czy podalismy datę?
 	if *date != "" {
@@ -727,13 +734,13 @@ func main() {
 
 	// Start pętli
 	for *looping {
-		fmt.Println("Sleeping for minute...")
+		log.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)
 		CSDBPrepareData(*gobackID, *startingID, *date)
 		WriteConfig()
 	}
 
-	fmt.Println("==========================================")
-	fmt.Println("=======          APP END.         ========")
-	fmt.Println("==========================================")
+	log.Println("==========================================")
+	log.Println("=======          APP END.         ========")
+	log.Println("==========================================")
 }

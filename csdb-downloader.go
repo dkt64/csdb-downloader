@@ -431,8 +431,8 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) {
 							newRelease.ReleaseType = entry.ReleaseType
 							newRelease.ReleasedAt = entry.XMLReleasedAt.XMLEvent.Name
 
-							log.Println("Date parsed = " + parsedDate.String())
-							log.Println("Date releas = " + relDate.String())
+							// log.Println("Date parsed = " + parsedDate.String())
+							// log.Println("Date releas = " + relDate.String())
 
 							if relDate.After(parsedDate) || (noDate && dateProvided) {
 								if len(entry.UsedSIDs) == 1 {

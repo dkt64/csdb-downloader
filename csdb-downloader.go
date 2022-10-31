@@ -155,6 +155,7 @@ type Config struct {
 	NoCompoDirectory  string
 	LastID            int
 	Date              string
+	NameWithID        bool
 	Types             []string
 }
 
@@ -227,7 +228,6 @@ func DownloadFile(path string, filename string, url string) error {
 	filepath := path + sep + filename
 
 	log.Println("Downloading new file " + url)
-	log.Println("Writing to " + filepath)
 
 	httpClient := http.Client{
 		Timeout: time.Second * 5, // Timeout after 5 seconds
@@ -253,17 +253,27 @@ func DownloadFile(path string, filename string, url string) error {
 	}
 	out.Close()
 
+	log.Println("Writing to " + filepath)
+
 	if strings.Contains(strings.ToLower(filename), ".zip") {
+
+		log.Println("Found ZIP file: " + filename)
+
 		zipReader, err := zip.OpenReader(filepath)
 		if ErrCheck(err) {
 			defer zipReader.Close()
 			for _, file := range zipReader.File {
 
-				log.Println("Extracting from ZIP: " + file.Name)
 				if !file.FileInfo().IsDir() {
 
+					log.Println("Extracting: " + file.Name)
+
+					// Tutaj tylko jeden rodzaj slash'a
+					f := strings.ReplaceAll(file.Name, "\\", "/")
+					p := strings.ReplaceAll(path, "\\", "/")
+
 					outputFile, err := os.OpenFile(
-						path+sep+file.Name,
+						p+"/"+f,
 						os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 						file.Mode(),
 					)
@@ -535,7 +545,12 @@ func DownloadRelease(release Release) {
 			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + "unknown" + sep + release.ReleaseName
 		}
 
-		dir = filepath.Clean(dir)
+		// dir = filepath.Clean(dir)
+
+		if config.NameWithID {
+			dir += "_" + strconv.Itoa(release.ReleaseID)
+		}
+
 		dir = strings.ReplaceAll(dir, "...", "")
 
 		if !fileExists(dir + sep + filename) {
@@ -555,8 +570,10 @@ func main() {
 	gobackID := flag.Int("goback", 0, "How many IDs go back for updates -> change of config.LastID")
 	startingID := flag.Int("start", 0, "Force ID number to start from -> change of config.LastID")
 	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
-	looping := flag.Bool("loop", false, "Set to 'true' if you want to loop the program (default 'false')")
+	addID := flag.Bool("id", false, "Set to 'true' if you want to add id number to release folder name (default 'false') -> change of config.NameWithID")
+
 	allTypes := flag.Bool("all", false, "Set to 'true' if you want to ignore config.Types and download all types of releases (default 'false')")
+	looping := flag.Bool("loop", false, "Set to 'true' if you want to loop the program (default 'false')")
 
 	flag.Parse()
 
@@ -584,6 +601,7 @@ func main() {
 		config.DownloadDirectory = "csdb"
 		config.NoCompoDirectory = "out_of_compo"
 		config.LastID = 0
+		config.NameWithID = false
 		config.Types = []string{"C64 Music", "C64 Graphics", "C64 Demo", "C64 One-File Demo", "C64 Intro", "C64 4K Intro", "C64 Crack Intro", "C64 Music Collection", "C64 Graphics Collection", "C64 Diskmag", "C64 Charts", "C64 Invitation", "C64 1K Intro", "C64 Fake Demo"}
 	}
 
@@ -595,6 +613,11 @@ func main() {
 		config.Date = *date
 	} else {
 		*date = config.Date
+	}
+
+	// Czy wybrano opcję addID
+	if *addID {
+		config.NameWithID = *addID
 	}
 
 	WriteConfig()

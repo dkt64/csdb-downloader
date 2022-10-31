@@ -8,11 +8,13 @@
 * *LastID* - last ID downloaded, you can adjust it to look deeper in the history
 * *Date* - download only releases newer then provided date (download all if empty)
 * *Types* - download only listed types of releases (download all if empty)
+* *NameWithID* - ID number added to release folder name
 
 **Command-line** options:
 * *goback* - how many IDs to go back with downloading/checking -> updates config.LastID
 * *start* - force ID number to start from -> updates config.LastID
-* *date* - download only releases newer then date in form YYYY-MM-DD -> updates config.Date (!)
+* *date* - download only releases newer then date in form YYYY-MM-DD -> updates config.Date
+* *id* - use this option to add ID number added to release folder name -> updates config.Date
 * *loop* - use this option to make the program loop forever (sleep for 1 minute after checking)
 * *all* - use this option to ignore config.Types and download all types of releases
 
@@ -37,7 +39,8 @@ Use -help option to get info in command-line
 You can adjust the list for your own interests f.e. "C64 Crack", "C64 Tool" or maybe "Other Platform C64 Tool"...
 
 **Notes**
-* date (UTC) parameter is only for comparing the dates, program will not start downloading from provided date, ID number is the primary selector
+* date (UTC) parameter is only for comparing the dates, program will not start downloading releases from provided date, ID number is the primary selector
+* files are not overwritten if already exists, new files are added
 * *LastID* value in config file is increasing after every download
 
 **Example**
@@ -53,4 +56,4 @@ Command below will download all releases released beggining of 2022-10-28:
 
 *DKT*
 
-__Samar Productions / Oct 2022__
+__Samar Productions / 31 Oct 2022__

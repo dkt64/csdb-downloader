@@ -235,34 +235,6 @@ func DownloadFile(path string, filename string, url string) error {
 		log.Fatal(err)
 	}
 
-	// httpClient := http.Client{
-	// 	Timeout: time.Second * 5, // Timeout after 5 seconds
-	// }
-
-	// resp, err := httpClient.Get(url)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer resp.Body.Close()
-
-	// if resp.StatusCode == http.StatusOK {
-
-	// 	// Create the file
-	// 	out, err := os.Create(filepath)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	defer out.Close()
-
-	// 	// Write the body to file
-	// 	_, err = io.Copy(out, resp.Body)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	out.Close()
-
-	// log.Println("Writing to " + filepath)
-
 	log.Println("Writing to " + resp.Filename)
 
 	if strings.Contains(strings.ToLower(filename), ".zip") {
@@ -311,9 +283,6 @@ func DownloadFile(path string, filename string, url string) error {
 			}
 		}
 	}
-	// } else {
-	// 	log.Println("Bad status.")
-	// }
 
 	return err
 }
@@ -534,8 +503,12 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) {
 func DownloadRelease(release Release) {
 	for _, downloadLink := range release.DownloadLinks {
 		filename := filepath.Base(downloadLink)
+
 		filename = filepath.Clean(filename)
 		filename = strings.ReplaceAll(filename, "...", "")
+		filename = strings.ReplaceAll(filename, "*", "")
+		filename = strings.ReplaceAll(filename, "?", "")
+
 		if release.ReleasedAt == "" {
 			release.ReleasedAt = config.NoCompoDirectory
 		}
@@ -564,13 +537,14 @@ func DownloadRelease(release Release) {
 			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + "unknown" + sep + release.ReleaseName
 		}
 
-		// dir = filepath.Clean(dir)
+		dir = filepath.Clean(dir)
+		dir = strings.ReplaceAll(dir, "...", "")
+		dir = strings.ReplaceAll(dir, "*", "")
+		dir = strings.ReplaceAll(dir, "?", "")
 
 		if config.NameWithID {
 			dir += "_" + strconv.Itoa(release.ReleaseID)
 		}
-
-		dir = strings.ReplaceAll(dir, "...", "")
 
 		if !fileExists(dir + sep + filename) {
 			DownloadFile(dir, filename, downloadLink)
@@ -599,7 +573,7 @@ func main() {
 	//
 	// Logowanie do pliku
 	//
-	logFileApp, err := os.OpenFile("app.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	logFileApp, err := os.OpenFile("csdb-downloader.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	ErrCheck(err)
 	log.SetOutput(io.MultiWriter(os.Stdout, logFileApp))
 

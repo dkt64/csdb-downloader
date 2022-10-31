@@ -14,7 +14,7 @@
 * *goback* - how many IDs to go back with downloading/checking -> updates config.LastID
 * *start* - force ID number to start from -> updates config.LastID
 * *date* - download only releases newer then date in form YYYY-MM-DD -> updates config.Date
-* *id* - use this option to add ID number added to release folder name -> updates config.Date
+* *id* - use this option to add ID number to release folder name -> updates config.NameWithID
 * *loop* - use this option to make the program loop forever (sleep for 1 minute after checking)
 * *all* - use this option to ignore config.Types and download all types of releases
 

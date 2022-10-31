@@ -491,6 +491,11 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 							}
 						}
 
+						// Jeżeli nie ma podanych typów to ściągamy wszystko
+						if len(config.Types) == 0 {
+							typeOK = true
+						}
+
 						// Info
 						prodYear, _ := strconv.Atoi(entry.ReleaseYear)
 						prodMonth, _ := strconv.Atoi(entry.ReleaseMonth)
@@ -646,11 +651,27 @@ func DownloadRelease(release Release) {
 		if release.ReleasedAt == "" {
 			release.ReleasedAt = config.NoCompoDirectory
 		}
-		var dir string
+
+		var groups string
+
 		if len(release.ReleasedBy) > 0 {
-			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + release.ReleasedBy[0] + sep + release.ReleaseName
+			for i, group := range release.ReleasedBy {
+				if i == len(release.ReleasedBy)-1 {
+					groups += group
+				} else {
+					groups += group + " & "
+				}
+			}
+		}
+
+		log.Println("Grupy: " + groups)
+
+		var dir string
+
+		if len(release.ReleasedBy) > 0 {
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + groups + sep + release.ReleaseName
 		} else if len(release.Credits) > 0 {
-			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + release.Credits[0] + sep + release.ReleaseName
+			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + groups + sep + release.ReleaseName
 		} else {
 			dir = cacheDir + sep + release.ReleasedAt + sep + release.ReleaseType + sep + "unknown" + sep + release.ReleaseName
 		}

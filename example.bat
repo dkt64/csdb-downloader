@@ -1,0 +1,1 @@
+go run csdb-downloader.go --start=224980 --date=2022-10-28 --all=true

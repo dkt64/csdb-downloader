@@ -2,8 +2,6 @@
 // ------------------------------------------------------------------------------------------------
 // csdb downloader by DKT/Samar
 // ------------------------------------------------------------------------------------------------
-// TODO:
-// - put the output file to ALL the groups releasing the stuff (now i write to ReleasedBy[0])
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 
 package main
@@ -15,7 +13,6 @@ import (
 	"encoding/xml"
 	"flag"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -149,16 +146,7 @@ type Release struct {
 	ReleasedBy        []string
 	Credits           []string
 	DownloadLinks     []string
-	// SrcCached         bool
-	// WAVCached         bool
-	// SrcExt            string
-	// Disabled          bool
-	// UsedSIDs          []UsedSID
 }
-
-// releases - glówna i globalna tablica z aktualnymi produkcjami
-// ================================================================================================
-// var releases []Release
 
 // Config - info o ostatniej ściągniętej produkcji
 // ================================================================================================
@@ -196,24 +184,10 @@ func ErrCheck2(errNr error) bool {
 	return errNr == nil
 }
 
-// // ReadDb - Odczyt bazy
-// // ================================================================================================
-// func ReadDb() {
-// 	file, _ := ioutil.ReadFile("releases.json")
-// 	_ = json.Unmarshal([]byte(file), &releases)
-// }
-
-// // WriteDb - Zapis bazy
-// // ================================================================================================
-// func WriteDb() {
-// 	file, _ := json.MarshalIndent(releases, "", " ")
-// 	_ = ioutil.WriteFile("releases.json", file, 0666)
-// }
-
 // ReadConfig - Odczyt konfiguracji
 // ================================================================================================
 func ReadConfig() {
-	file, _ := ioutil.ReadFile("csdb-downloader.json")
+	file, _ := os.ReadFile("csdb-downloader.json")
 	_ = json.Unmarshal([]byte(file), &config)
 }
 
@@ -221,7 +195,7 @@ func ReadConfig() {
 // ================================================================================================
 func WriteConfig() {
 	file, _ := json.MarshalIndent(config, "", " ")
-	_ = ioutil.WriteFile("csdb-downloader.json", file, 0666)
+	_ = os.WriteFile("csdb-downloader.json", file, 0666)
 }
 
 // fileExists - sprawdzenie czy plik istnieje
@@ -234,72 +208,6 @@ func fileExists(filename string) bool {
 
 	return true
 }
-
-// // Sortowanie datami
-// // ================================================================================================
-
-// type byDate []Release
-
-// func (s byDate) Len() int {
-// 	return len(s)
-// }
-// func (s byDate) Swap(i, j int) {
-// 	s[i], s[j] = s[j], s[i]
-// }
-// func (s byDate) Less(i, j int) bool {
-
-// 	d1 := time.Date(s[i].ReleaseYear, time.Month(s[i].ReleaseMonth), s[i].ReleaseDay, 0, 0, 0, 0, time.Local)
-// 	d2 := time.Date(s[j].ReleaseYear, time.Month(s[j].ReleaseMonth), s[j].ReleaseDay, 0, 0, 0, 0, time.Local)
-
-// 	return d2.Before(d1)
-// }
-
-// // Sortowanie byID
-// // ================================================================================================
-
-// type byID []Release
-
-// func (s byID) Len() int {
-// 	return len(s)
-// }
-// func (s byID) Swap(i, j int) {
-// 	s[i], s[j] = s[j], s[i]
-// }
-// func (s byID) Less(i, j int) bool {
-// 	return s[i].ReleaseID > s[j].ReleaseID
-// }
-
-// // Sortowanie datami i ID
-// // ================================================================================================
-
-// type byDateAndID []Release
-
-// func (s byDateAndID) Len() int {
-// 	return len(s)
-// }
-// func (s byDateAndID) Swap(i, j int) {
-// 	s[i], s[j] = s[j], s[i]
-// }
-// func (s byDateAndID) Less(i, j int) bool {
-
-// 	d1 := time.Date(s[i].ReleaseYear, time.Month(s[i].ReleaseMonth), s[i].ReleaseDay, 0, 0, 0, 0, time.Local)
-// 	d2 := time.Date(s[j].ReleaseYear, time.Month(s[j].ReleaseMonth), s[j].ReleaseDay, 0, 0, 0, 0, time.Local)
-// 	id1 := s[i].ReleaseID
-// 	id2 := s[j].ReleaseID
-
-// 	return d2.Before(d1) && id1 > id2
-// }
-
-// // fileExists - sprawdzenie czy plik istnieje
-// // ================================================================================================
-// func fileSize(filename string) (int64, error) {
-// 	// Sprawdzamy rozmiar pliku
-// 	fileStat, err := os.Stat(filename)
-// 	if ErrCheck(err) {
-// 		return fileStat.Size(), err
-// 	}
-// 	return fileStat.Size(), err
-// }
 
 // DownloadFile will download a url to a local file. It's efficient because it will
 // write as it downloads and not load the whole file into memory.
@@ -378,15 +286,6 @@ func DownloadFile(path string, filename string, url string) error {
 		}
 	}
 
-	// Sprawdzzamy rozmiar pliku
-	// fi, err := os.Stat(filepath)
-	// if err != nil {
-	// 	return err
-	// }
-	// get the size
-	// size := fi.Size()
-	// log.Println("Downloaded the file with size of " + strconv.Itoa(int(size)) + " bytes.")
-
 	return err
 }
 
@@ -394,17 +293,11 @@ func DownloadFile(path string, filename string, url string) error {
 // ================================================================================================
 func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 	return input, nil
-
-	// if charset == "ISO-8859-1" {
-	// 	// Windows-1252 is a superset of ISO-8859-1, so should do here
-	// 	return charmap.Windows1252.NewDecoder().Reader(input), nil
-	// }
-	// return nil, fmt.Errorf("Unknown charset: %s", charset)
 }
 
 // CSDBPrepareData - parametry (gobackID, startingID, date) - Wątek odczygtujący wszystkie releasy z csdb
 // ================================================================================================
-func CSDBPrepareData(gobackID int, startingID int, date string) {
+func CSDBPrepareData(gobackID int, startingID int, date string, all bool) {
 
 	// log.Println(*date)
 	parsedDate, _ := time.Parse("2006-01-02", date)
@@ -420,7 +313,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 	if ErrCheck(err) {
 
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		ErrCheck(err)
 		// log.Println(string(body))
 		resp.Body.Close()
@@ -463,7 +356,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 
 			if ErrCheck(err) {
 				defer resp.Body.Close()
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				defer resp.Body.Close()
 
 				if ErrCheck(err) {
@@ -492,7 +385,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 						}
 
 						// Jeżeli nie ma podanych typów to ściągamy wszystko
-						if len(config.Types) == 0 {
+						if len(config.Types) == 0 || all {
 							typeOK = true
 						}
 
@@ -512,7 +405,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 						}
 
 						noDate := prodYear == 1982 && prodMonth == 1 && prodDay == 1
-						relDate := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 0, time.Local)
+						relDate := time.Date(prodYear, time.Month(prodMonth), prodDay, 0, 0, 0, 1, time.UTC)
 						dateProvided := date == ""
 
 						if typeOK {
@@ -537,6 +430,9 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 							newRelease.ReleaseDay = prodDay
 							newRelease.ReleaseType = entry.ReleaseType
 							newRelease.ReleasedAt = entry.XMLReleasedAt.XMLEvent.Name
+
+							log.Println("Date parsed = " + parsedDate.String())
+							log.Println("Date releas = " + relDate.String())
 
 							if relDate.After(parsedDate) || (noDate && dateProvided) {
 								if len(entry.UsedSIDs) == 1 {
@@ -604,43 +500,6 @@ func CSDBPrepareData(gobackID int, startingID int, date string) {
 	}
 }
 
-// // DownloadFiles - Ściągnięcie plików
-// // ================================================================================================
-// func DownloadFiles() {
-// 	for i := len(releases) - 1; i >= 0; i-- {
-// 		// for _, release := range releases {
-// 		release := releases[i]
-// 		// log.Println(release)
-// 		// if release.ReleaseID > config.LastDownloadedID {
-// 		// news
-// 		for _, downloadLink := range release.DownloadLinks {
-// 			filename := filepath.Base(downloadLink)
-// 			filename = filepath.Clean(filename)
-// 			filename = strings.ReplaceAll(filename, "...", "")
-// 			if release.ReleasedAt == "" {
-// 				release.ReleasedAt = config.NoCompoDirectory
-// 			}
-// 			dir := cacheDir + sep + release.ReleasedAt + sep + release.ReleasedBy[0] + sep + release.ReleaseName
-// 			dir = filepath.Clean(dir)
-// 			dir = strings.ReplaceAll(dir, "...", "")
-
-// 			if !fileExists(dir + sep + filename) {
-// 				err := DownloadFile(dir, filename, downloadLink)
-// 				if err == nil {
-// 					log.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
-// 					// log.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
-// 					// config.LastDownloadedID = release.ReleaseID
-// 					// WriteConfig()
-// 				}
-// 			}
-// 			// else {
-// 			// 	// log.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
-// 			// }
-// 		}
-// 		// }
-// 	}
-// }
-
 // DownloadRelease - Ściągnięcie pojedynczego release'u i zapisanie
 // ================================================================================================
 func DownloadRelease(release Release) {
@@ -664,7 +523,7 @@ func DownloadRelease(release Release) {
 			}
 		}
 
-		log.Println("Grupy: " + groups)
+		// log.Println("Grupy: " + groups)
 
 		var dir string
 
@@ -681,17 +540,7 @@ func DownloadRelease(release Release) {
 
 		if !fileExists(dir + sep + filename) {
 			DownloadFile(dir, filename, downloadLink)
-			// err := DownloadFile(dir, filename, downloadLink)
-			// if err == nil {
-			// 	// log.Println("New release: " + release.ReleaseName + " by " + release.ReleasedBy[0])
-			// 	// log.Println("File " + filename + " downloaded for ID " + strconv.Itoa(release.ReleaseID))
-			// 	// config.LastDownloadedID = release.ReleaseID
-			// 	// WriteConfig()
-			// }
 		}
-		// else {
-		// 	// log.Println("File " + filename + " already exists for ID " + strconv.Itoa(release.ReleaseID))
-		// }
 	}
 }
 
@@ -707,6 +556,7 @@ func main() {
 	startingID := flag.Int("start", 0, "Force ID number to start from -> change of config.LastID")
 	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
 	looping := flag.Bool("loop", false, "Set to 'true' if you want to loop the program (default 'false')")
+	allTypes := flag.Bool("all", false, "Set to 'true' if you want to ignore config.Types and download all types of releases (default 'false')")
 
 	flag.Parse()
 
@@ -750,14 +600,14 @@ func main() {
 	WriteConfig()
 
 	// Wykonanie pierwszy raz
-	CSDBPrepareData(*gobackID, *startingID, *date)
+	CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
 	WriteConfig()
 
 	// Start pętli
 	for *looping {
 		log.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)
-		CSDBPrepareData(*gobackID, *startingID, *date)
+		CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
 		WriteConfig()
 	}
 

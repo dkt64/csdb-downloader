@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cavaliergopher/grab/v3"
 	"github.com/gookit/color"
 )
 
@@ -229,31 +230,40 @@ func DownloadFile(path string, filename string, url string) error {
 
 	log.Println("Downloading new file " + url)
 
-	httpClient := http.Client{
-		Timeout: time.Second * 5, // Timeout after 5 seconds
-	}
-
-	resp, err := httpClient.Get(url)
+	resp, err := grab.Get(filepath, url)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
+	// httpClient := http.Client{
+	// 	Timeout: time.Second * 5, // Timeout after 5 seconds
+	// }
 
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
-	}
-	out.Close()
+	// resp, err := httpClient.Get(url)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer resp.Body.Close()
 
-	log.Println("Writing to " + filepath)
+	// if resp.StatusCode == http.StatusOK {
+
+	// 	// Create the file
+	// 	out, err := os.Create(filepath)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	defer out.Close()
+
+	// 	// Write the body to file
+	// 	_, err = io.Copy(out, resp.Body)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	out.Close()
+
+	// log.Println("Writing to " + filepath)
+
+	log.Println("Writing to " + resp.Filename)
 
 	if strings.Contains(strings.ToLower(filename), ".zip") {
 
@@ -291,10 +301,19 @@ func DownloadFile(path string, filename string, url string) error {
 							ErrCheck(err)
 						}
 					}
+				} else {
+					// Tutaj tylko jeden rodzaj slash'a
+					f := strings.ReplaceAll(file.Name, "\\", "/")
+					p := strings.ReplaceAll(path, "\\", "/")
+					os.MkdirAll(p+"/"+f, 0777)
+					os.Chmod(p+"/"+f, 0777)
 				}
 			}
 		}
 	}
+	// } else {
+	// 	log.Println("Bad status.")
+	// }
 
 	return err
 }

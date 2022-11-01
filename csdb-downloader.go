@@ -295,7 +295,7 @@ func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 
 // CSDBPrepareData - parametry (gobackID, startingID, date) - Wątek odczygtujący wszystkie releasy z csdb
 // ================================================================================================
-func CSDBPrepareData(gobackID int, startingID int, date string, all bool) {
+func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retval bool) {
 
 	// log.Println(*date)
 	parsedDate, _ := time.Parse("2006-01-02", date)
@@ -408,8 +408,10 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) {
 
 						if typeOK {
 							color.LightGreen.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
+							log.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
 						} else {
 							color.Secondary.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
+							log.Printf("ID %d %04d-%02d-%02d %s\n", checkingID, prodYear, prodMonth, prodDay, entry.ReleaseType)
 						}
 
 						// Jeżeli typ OK to działamy dalej
@@ -493,9 +495,15 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) {
 			time.Sleep(time.Millisecond * 200)
 		}
 
+		// wszystko zakończone więc sukces
+		return true
+
 	} else {
 		log.Println("csdb.dk communication error")
 	}
+
+	// coś poszło nie tak - będzie kolejna próba
+	return false
 }
 
 // DownloadRelease - Ściągnięcie pojedynczego release'u i zapisanie
@@ -616,14 +624,26 @@ func main() {
 	WriteConfig()
 
 	// Wykonanie pierwszy raz
-	CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
+	// 5 prób
+	for i := 0; i < 5; i++ {
+		if CSDBPrepareData(*gobackID, *startingID, *date, *allTypes) {
+			break
+		}
+	}
 	WriteConfig()
 
 	// Start pętli
 	for *looping {
 		log.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)
-		CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
+
+		// 5 prób
+		for i := 0; i < 5; i++ {
+			if CSDBPrepareData(*gobackID, *startingID, *date, *allTypes) {
+				break
+			}
+		}
+
 		WriteConfig()
 	}
 

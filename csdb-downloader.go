@@ -226,59 +226,86 @@ func DownloadFile(path string, filename string, url string) error {
 		return err
 	}
 
-	filepath := path + sep + filename
+	filepathname := path + sep + filename
+
+	filepathname = filepath.Clean(filepathname)
+	filepathname = strings.ReplaceAll(filepathname, "...", "")
+	filepathname = strings.ReplaceAll(filepathname, "*", "")
+	filepathname = strings.ReplaceAll(filepathname, "?", "")
+	filepathname = strings.ReplaceAll(filepathname, "|", "")
+	filepathname = strings.ReplaceAll(filepathname, "<", "")
+	filepathname = strings.ReplaceAll(filepathname, ">", "")
+	filepathname = strings.ReplaceAll(filepathname, "\"", "")
+	filepathname = strings.ReplaceAll(filepathname, ":", "")
 
 	log.Println("Downloading new file " + url)
 
-	resp, err := grab.Get(filepath, url)
+	resp, err := grab.Get(filepathname, url)
 	if err != nil {
-		log.Fatal(err)
+		if resp != nil {
+			if resp.IsComplete() {
+				// Jeżeli nie ściągnięty to będziemy próbowac jeszcze raz
+				log.Println("error in downloading " + resp.Filename)
+				return nil
+			} else {
+				// Jeżeli jakiś inny błąd (zapis pliku) to wysłamy err
+				log.Println("error in writing the file " + resp.Filename)
+				return err
+			}
+		} else {
+			// Jeżeli jakiś inny błąd (zapis pliku) to wysłamy err
+			log.Println("error in writing downloaded file or in URL")
+			return err
+		}
 	}
 
-	log.Println("Writing to " + resp.Filename)
+	if ErrCheck(err) {
 
-	if strings.Contains(strings.ToLower(filename), ".zip") {
+		log.Println("Writing to " + resp.Filename)
 
-		log.Println("Found ZIP file: " + filename)
+		if strings.Contains(strings.ToLower(filename), ".zip") {
 
-		zipReader, err := zip.OpenReader(filepath)
-		if ErrCheck(err) {
-			defer zipReader.Close()
-			for _, file := range zipReader.File {
+			log.Println("Found ZIP file: " + filename)
 
-				if !file.FileInfo().IsDir() {
+			zipReader, err := zip.OpenReader(filepathname)
+			if ErrCheck(err) {
+				defer zipReader.Close()
+				for _, file := range zipReader.File {
 
-					log.Println("Extracting: " + file.Name)
+					if !file.FileInfo().IsDir() {
 
-					// Tutaj tylko jeden rodzaj slash'a
-					f := strings.ReplaceAll(file.Name, "\\", "/")
-					p := strings.ReplaceAll(path, "\\", "/")
+						log.Println("Extracting: " + file.Name)
 
-					outputFile, err := os.OpenFile(
-						p+"/"+f,
-						os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-						file.Mode(),
-					)
-					if ErrCheck(err) {
-						defer outputFile.Close()
+						// Tutaj tylko jeden rodzaj slash'a
+						f := strings.ReplaceAll(file.Name, "\\", "/")
+						p := strings.ReplaceAll(path, "\\", "/")
 
-						// log.Println("Opening: " + file.Name)
-						// log.Println("Output: " + path + sep + file.Name)
-
-						zippedFile, err := file.Open()
+						outputFile, err := os.OpenFile(
+							p+"/"+f,
+							os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+							file.Mode(),
+						)
 						if ErrCheck(err) {
-							defer zippedFile.Close()
-							log.Println("Writing extracted file " + path + sep + file.Name)
-							_, err = io.Copy(outputFile, zippedFile)
-							ErrCheck(err)
+							defer outputFile.Close()
+
+							// log.Println("Opening: " + file.Name)
+							// log.Println("Output: " + path + sep + file.Name)
+
+							zippedFile, err := file.Open()
+							if ErrCheck(err) {
+								defer zippedFile.Close()
+								log.Println("Writing extracted file " + path + sep + file.Name)
+								_, err = io.Copy(outputFile, zippedFile)
+								ErrCheck(err)
+							}
 						}
+					} else {
+						// Tutaj tylko jeden rodzaj slash'a
+						f := strings.ReplaceAll(file.Name, "\\", "/")
+						p := strings.ReplaceAll(path, "\\", "/")
+						os.MkdirAll(p+"/"+f, 0777)
+						os.Chmod(p+"/"+f, 0777)
 					}
-				} else {
-					// Tutaj tylko jeden rodzaj slash'a
-					f := strings.ReplaceAll(file.Name, "\\", "/")
-					p := strings.ReplaceAll(path, "\\", "/")
-					os.MkdirAll(p+"/"+f, 0777)
-					os.Chmod(p+"/"+f, 0777)
 				}
 			}
 		}
@@ -293,16 +320,11 @@ func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 	return input, nil
 }
 
-// CSDBPrepareData - parametry (gobackID, startingID, date) - Wątek odczygtujący wszystkie releasy z csdb
+// CSDBPrepareData - parametry (gobackID, startingID, date, all) - Wątek odczygtujący wszystkie releasy z csdb
 // ================================================================================================
-func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retval bool) {
+func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool, int) {
 
-	// log.Println(*date)
 	parsedDate, _ := time.Parse("2006-01-02", date)
-	// log.Println(parsedDate)
-
-	// lastDate := time.Now().AddDate(0, -historyMaxMonths, 0)
-	// lastDate := time.Date(config.HistoryYear, time.Month(config.HistoryMonth), 1, 0, 0, 0, 0, time.Local)
 
 	// pobranie ostatniego release'u
 	netClient := &http.Client{Timeout: time.Second * 5}
@@ -312,7 +334,9 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retva
 
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
-		ErrCheck(err)
+		if !ErrCheck(err) {
+			return false, 0
+		}
 		// log.Println(string(body))
 		resp.Body.Close()
 
@@ -323,7 +347,9 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retva
 		decoder := xml.NewDecoder(reader)
 		decoder.CharsetReader = makeCharsetReader
 		err = decoder.Decode(&entry)
-		ErrCheck(err)
+		if !ErrCheck(err) {
+			return false, 0
+		}
 
 		// ustalenie od którego zaczynamy
 		newestCSDbID := entry.ID
@@ -467,7 +493,10 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retva
 								//
 								if len(newRelease.DownloadLinks) > 0 {
 									// releases = append(releases, newRelease)
-									DownloadRelease(newRelease)
+									err := DownloadRelease(newRelease)
+									if !ErrCheck(err) {
+										return false, checkingID
+									}
 									config.LastID = checkingID
 									// Update konfiga (LastID) po każdym sprawdzeniu
 									WriteConfig()
@@ -475,13 +504,17 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retva
 
 							}
 						}
+					} else {
+						log.Println("error in decoding xml")
+						// return false
 					}
 				} else {
 					log.Println("csdb.dk communication error")
+					return false, 0
 				}
 			} else {
 				log.Println("csdb.dk communication error")
-				break
+				return false, 0
 			}
 
 			if checkingID < newestCSDbID {
@@ -496,19 +529,29 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (retva
 		}
 
 		// wszystko zakończone więc sukces
-		return true
+		return true, 0
 
 	} else {
 		log.Println("csdb.dk communication error")
 	}
 
 	// coś poszło nie tak - będzie kolejna próba
-	return false
+	return false, 0
+}
+
+// CSDBPrepareDataScener - parametry (scenerID, date, all) - Wątek odczygtujący wszystkie releasy z csdb danego scenera
+// ================================================================================================
+func CSDBPrepareDataScener(scenerID int, date string, all bool) (retval bool) {
+
+	// TODO
+
+	return true
+
 }
 
 // DownloadRelease - Ściągnięcie pojedynczego release'u i zapisanie
 // ================================================================================================
-func DownloadRelease(release Release) {
+func DownloadRelease(release Release) error {
 	for _, downloadLink := range release.DownloadLinks {
 		filename := filepath.Base(downloadLink)
 
@@ -516,6 +559,11 @@ func DownloadRelease(release Release) {
 		filename = strings.ReplaceAll(filename, "...", "")
 		filename = strings.ReplaceAll(filename, "*", "")
 		filename = strings.ReplaceAll(filename, "?", "")
+		filename = strings.ReplaceAll(filename, "|", "")
+		filename = strings.ReplaceAll(filename, "<", "")
+		filename = strings.ReplaceAll(filename, ">", "")
+		filename = strings.ReplaceAll(filename, "\"", "")
+		filename = strings.ReplaceAll(filename, ":", "")
 
 		if release.ReleasedAt == "" {
 			release.ReleasedAt = config.NoCompoDirectory
@@ -549,15 +597,22 @@ func DownloadRelease(release Release) {
 		dir = strings.ReplaceAll(dir, "...", "")
 		dir = strings.ReplaceAll(dir, "*", "")
 		dir = strings.ReplaceAll(dir, "?", "")
+		dir = strings.ReplaceAll(dir, "|", "")
+		dir = strings.ReplaceAll(dir, "<", "")
+		dir = strings.ReplaceAll(dir, ">", "")
+		dir = strings.ReplaceAll(dir, "\"", "")
+		dir = strings.ReplaceAll(dir, ":", "")
 
 		if config.NameWithID {
 			dir += "_" + strconv.Itoa(release.ReleaseID)
 		}
 
 		if !fileExists(dir + sep + filename) {
-			DownloadFile(dir, filename, downloadLink)
+			return DownloadFile(dir, filename, downloadLink)
 		}
 	}
+
+	return nil
 }
 
 // [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
@@ -572,6 +627,9 @@ func main() {
 	startingID := flag.Int("start", 0, "Force ID number to start from -> change of config.LastID")
 	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
 	addID := flag.Bool("id", false, "Set to 'true' if you want to add id number to release folder name (default 'false') -> change of config.NameWithID")
+
+	// scener := flag.Int("scener", 0, "Get all releases the scener contributed in (ID)")
+	scener := 0
 
 	allTypes := flag.Bool("all", false, "Set to 'true' if you want to ignore config.Types and download all types of releases (default 'false')")
 	looping := flag.Bool("loop", false, "Set to 'true' if you want to loop the program (default 'false')")
@@ -626,9 +684,23 @@ func main() {
 	// Wykonanie pierwszy raz
 	// 5 prób
 	for i := 0; i < 5; i++ {
-		if CSDBPrepareData(*gobackID, *startingID, *date, *allTypes) {
-			break
+
+		if scener > 0 {
+			if CSDBPrepareDataScener(scener, *date, *allTypes) {
+				break
+			}
+		} else {
+			res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
+			if res {
+				break
+			} else if checkingID > 0 && i == 4 {
+				checkingID++
+				config.LastID = checkingID
+				i = 0
+			}
 		}
+
+		time.Sleep(time.Second * 5)
 	}
 	WriteConfig()
 
@@ -639,9 +711,22 @@ func main() {
 
 		// 5 prób
 		for i := 0; i < 5; i++ {
-			if CSDBPrepareData(*gobackID, *startingID, *date, *allTypes) {
-				break
+			if scener > 0 {
+				if CSDBPrepareDataScener(scener, *date, *allTypes) {
+					break
+				}
+			} else {
+				res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
+				if res {
+					break
+				} else if checkingID > 0 && i == 4 {
+					checkingID++
+					config.LastID = checkingID
+					i = 0
+				}
 			}
+
+			time.Sleep(time.Second * 5)
 		}
 
 		WriteConfig()

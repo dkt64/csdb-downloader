@@ -505,8 +505,8 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 							}
 						}
 					} else {
-						log.Println("error in decoding xml")
-						// return false
+						log.Println("error in decoding xml - probably a deleted id")
+						return false, checkingID
 					}
 				} else {
 					log.Println("csdb.dk communication error")
@@ -529,7 +529,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 		}
 
 		// wszystko zakończone więc sukces
-		return true, 0
+		return true, checkingID
 
 	} else {
 		log.Println("csdb.dk communication error")
@@ -682,9 +682,10 @@ func main() {
 	WriteConfig()
 
 	// Wykonanie pierwszy raz
-	// 5 prób
-	for i := 0; i < 5; i++ {
+	// 3 próby
+	for i := 0; i < 3; i++ {
 
+		log.Println("Attempt nr " + strconv.Itoa(i+1))
 		if scener > 0 {
 			if CSDBPrepareDataScener(scener, *date, *allTypes) {
 				break
@@ -693,10 +694,16 @@ func main() {
 			res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
 			if res {
 				break
-			} else if checkingID > 0 && i == 4 {
-				checkingID++
-				config.LastID = checkingID
-				i = 0
+			} else if i == 2 {
+				if checkingID > 0 {
+					log.Println("Too many errors with ID " + strconv.Itoa(checkingID))
+					checkingID++
+					config.LastID = checkingID
+				} else {
+					log.Println("Too many communiaction errors, waiting 30 sec...")
+					time.Sleep(time.Second * 30)
+				}
+				i = -1
 			}
 		}
 
@@ -709,20 +716,27 @@ func main() {
 		log.Println("Sleeping for minute...")
 		time.Sleep(time.Minute)
 
-		// 5 prób
-		for i := 0; i < 5; i++ {
+		// 3 próby
+		for i := 0; i < 3; i++ {
 			if scener > 0 {
 				if CSDBPrepareDataScener(scener, *date, *allTypes) {
 					break
 				}
 			} else {
+				log.Println("Attempt nr " + strconv.Itoa(i+1))
 				res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
 				if res {
 					break
-				} else if checkingID > 0 && i == 4 {
-					checkingID++
-					config.LastID = checkingID
-					i = 0
+				} else if i == 2 {
+					if checkingID > 0 {
+						log.Println("Too many errors with ID " + strconv.Itoa(checkingID))
+						checkingID++
+						config.LastID = checkingID
+					} else {
+						log.Println("Too many communiaction errors, waiting 30 sec...")
+						time.Sleep(time.Second * 30)
+					}
+					i = -1
 				}
 			}
 

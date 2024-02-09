@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"flag"
+	"github.com/jlaffaye/ftp"
 	"io"
 	"log"
 	"net/http"
@@ -214,7 +215,7 @@ func fileExists(filename string) bool {
 // DownloadFile will download a url to a local file. It's efficient because it will
 // write as it downloads and not load the whole file into memory.
 // ================================================================================================
-func DownloadFile(path string, filename string, url string) error {
+func DownloadFile(path string, filename string, downloadUrl string) error {
 
 	var err error
 
@@ -238,73 +239,112 @@ func DownloadFile(path string, filename string, url string) error {
 	filepathname = strings.ReplaceAll(filepathname, "\"", "")
 	filepathname = strings.ReplaceAll(filepathname, ":", "")
 
-	log.Println("Downloading new file " + url)
+	log.Println("Downloading new file " + downloadUrl)
 
-	resp, err := grab.Get(filepathname, url)
-	if err != nil {
-		if resp != nil {
-			if resp.IsComplete() {
-				// Jeżeli nie ściągnięty to będziemy próbowac jeszcze raz
-				log.Println("error in downloading " + resp.Filename)
-				return nil
-			} else {
-				// Jeżeli jakiś inny błąd (zapis pliku) to wysłamy err
-				log.Println("error in writing the file " + resp.Filename)
-				return err
-			}
-		} else {
-			// Jeżeli jakiś inny błąd (zapis pliku) to wysłamy err
-			log.Println("error in writing downloaded file or in URL")
+	if strings.HasPrefix(downloadUrl, "ftp://") {
+
+		u, err := url.Parse(downloadUrl)
+		if err != nil {
+			log.Println("error parsing url " + err.Error())
 			return err
 		}
-	}
 
-	if ErrCheck(err) {
+		c, err := ftp.Dial(u.Host+":21", ftp.DialWithTimeout(5*time.Second))
+		if err != nil {
+			log.Println("error accessing ftp url " + err.Error())
+			return err
+		}
 
-		log.Println("Writing to " + resp.Filename)
+		err = c.Login("anonymous", "anonymous")
+		if err != nil {
+			log.Println("error logging to ftp server " + err.Error())
+			return err
+		}
 
-		if strings.Contains(strings.ToLower(filename), ".zip") {
+		r, err := c.Retr(u.Path)
+		if err != nil {
+			log.Println("error downloading file from ftp server " + err.Error())
+			return err
+		}
+		defer r.Close()
 
-			log.Println("Found ZIP file: " + filename)
+		out, _ := os.Create(filepathname)
+		if _, err := io.Copy(out, r); err != nil {
+			log.Println("error writing file from ftp download " + err.Error())
+			return err
+		}
 
-			zipReader, err := zip.OpenReader(filepathname)
-			if ErrCheck(err) {
-				defer zipReader.Close()
-				for _, file := range zipReader.File {
+		if err := c.Quit(); err != nil {
+			log.Println("error closing ftp connection " + err.Error())
+			return err
+		}
+	} else {
+		resp, err := grab.Get(filepathname, downloadUrl)
+		if err != nil {
+			if resp != nil {
+				if resp.IsComplete() {
+					// Jeżeli nie ściągnięty to będziemy próbowac jeszcze raz
+					log.Println("error in downloading " + resp.Filename)
+					return nil
+				} else {
+					// Jeżeli jakiś inny błąd (zapis pliku) to wysłamy err
+					log.Println("error in writing the file " + resp.Filename)
+					return err
+				}
+			} else {
+				// Jeżeli jakiś inny błąd (zapis pliku) to wysłamy err
+				log.Println("error in writing downloaded file or in URL")
+				return err
+			}
+		}
 
-					if !file.FileInfo().IsDir() {
+		if ErrCheck(err) {
 
-						log.Println("Extracting: " + file.Name)
+			log.Println("Writing to " + resp.Filename)
 
-						// Tutaj tylko jeden rodzaj slash'a
-						f := strings.ReplaceAll(file.Name, "\\", "/")
-						p := strings.ReplaceAll(path, "\\", "/")
+			if strings.Contains(strings.ToLower(filename), ".zip") {
 
-						outputFile, err := os.OpenFile(
-							p+"/"+f,
-							os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-							file.Mode(),
-						)
-						if ErrCheck(err) {
-							defer outputFile.Close()
+				log.Println("Found ZIP file: " + filename)
 
-							// log.Println("Opening: " + file.Name)
-							// log.Println("Output: " + path + sep + file.Name)
+				zipReader, err := zip.OpenReader(filepathname)
+				if ErrCheck(err) {
+					defer zipReader.Close()
+					for _, file := range zipReader.File {
 
-							zippedFile, err := file.Open()
+						if !file.FileInfo().IsDir() {
+
+							log.Println("Extracting: " + file.Name)
+
+							// Tutaj tylko jeden rodzaj slash'a
+							f := strings.ReplaceAll(file.Name, "\\", "/")
+							p := strings.ReplaceAll(path, "\\", "/")
+
+							outputFile, err := os.OpenFile(
+								p+"/"+f,
+								os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+								file.Mode(),
+							)
 							if ErrCheck(err) {
-								defer zippedFile.Close()
-								log.Println("Writing extracted file " + path + sep + file.Name)
-								_, err = io.Copy(outputFile, zippedFile)
-								ErrCheck(err)
+								defer outputFile.Close()
+
+								// log.Println("Opening: " + file.Name)
+								// log.Println("Output: " + path + sep + file.Name)
+
+								zippedFile, err := file.Open()
+								if ErrCheck(err) {
+									defer zippedFile.Close()
+									log.Println("Writing extracted file " + path + sep + file.Name)
+									_, err = io.Copy(outputFile, zippedFile)
+									ErrCheck(err)
+								}
 							}
+						} else {
+							// Tutaj tylko jeden rodzaj slash'a
+							f := strings.ReplaceAll(file.Name, "\\", "/")
+							p := strings.ReplaceAll(path, "\\", "/")
+							os.MkdirAll(p+"/"+f, 0777)
+							os.Chmod(p+"/"+f, 0777)
 						}
-					} else {
-						// Tutaj tylko jeden rodzaj slash'a
-						f := strings.ReplaceAll(file.Name, "\\", "/")
-						p := strings.ReplaceAll(path, "\\", "/")
-						os.MkdirAll(p+"/"+f, 0777)
-						os.Chmod(p+"/"+f, 0777)
 					}
 				}
 			}

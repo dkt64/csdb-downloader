@@ -283,6 +283,9 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			return err
 		}
 	} else {
+		if strings.Contains(filepathname, "%") {
+			filepathname = strings.ReplaceAll(filepathname, "%", "_")
+		}
 		resp, err := grab.Get(filepathname, downloadUrl)
 		if err != nil {
 			if resp != nil {
@@ -368,7 +371,7 @@ func makeCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 
 // CSDBPrepareData - parametry (gobackID, startingID, date, all) - Wątek odczygtujący wszystkie releasy z csdb
 // ================================================================================================
-func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool, int) {
+func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool, bool, int) {
 
 	parsedDate, _ := time.Parse("2006-01-02", date)
 
@@ -381,7 +384,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if !ErrCheck(err) {
-			return false, 0
+			return false, false, 0
 		}
 		// log.Println(string(body))
 		resp.Body.Close()
@@ -394,7 +397,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 		decoder.CharsetReader = makeCharsetReader
 		err = decoder.Decode(&entry)
 		if !ErrCheck(err) {
-			return false, 0
+			return false, false, 0
 		}
 
 		// ustalenie od którego zaczynamy
@@ -432,7 +435,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 
 				if !strings.HasPrefix(string(body), "<?xml") {
 					log.Printf("Received broken CSDbData xml from %s skipping entry.\n", releaseMetadataUrl)
-					return false, checkingID
+					return true, false, checkingID
 				}
 
 				if ErrCheck(err) {
@@ -535,7 +538,8 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 								// Najpierw SIDy
 
 								for _, link := range entry.DownloadLinks {
-									newLink, _ := url.PathUnescape(link.Link)
+									// newLink, _ := url.PathUnescape(link.Link)
+									newLink := link.Link
 									// log.Println("Download link: " + newLink)
 									newRelease.DownloadLinks = append(newRelease.DownloadLinks, newLink)
 								}
@@ -547,7 +551,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 									// releases = append(releases, newRelease)
 									err := DownloadRelease(newRelease)
 									if !ErrCheck(err) {
-										return false, checkingID
+										return false, false, checkingID
 									}
 									config.LastID = checkingID
 									// Update konfiga (LastID) po każdym sprawdzeniu
@@ -558,15 +562,15 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 						}
 					} else {
 						log.Println("error in decoding xml - probably a deleted id")
-						return false, checkingID
+						return false, false, checkingID
 					}
 				} else {
 					log.Println("csdb.dk communication error")
-					return false, 0
+					return false, false, 0
 				}
 			} else {
 				log.Println("csdb.dk communication error")
-				return false, 0
+				return false, false, 0
 			}
 
 			if checkingID < newestCSDbID {
@@ -581,14 +585,14 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 		}
 
 		// wszystko zakończone więc sukces
-		return true, checkingID
+		return false, true, checkingID
 
 	} else {
 		log.Println("csdb.dk communication error")
 	}
 
 	// coś poszło nie tak - będzie kolejna próba
-	return false, 0
+	return false, false, 0
 }
 
 // CSDBPrepareDataScener - parametry (scenerID, date, all) - Wątek odczygtujący wszystkie releasy z csdb danego scenera
@@ -744,9 +748,14 @@ func main() {
 				break
 			}
 		} else {
-			res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
+			skip, res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
 			if res {
 				break
+			} else if skip {
+				log.Println("Skipped entry " + strconv.Itoa(checkingID))
+				checkingID++
+				config.LastID = checkingID
+				WriteConfig()
 			} else if i == 2 {
 				if checkingID > 0 {
 					log.Println("Too many errors with ID " + strconv.Itoa(checkingID))
@@ -757,8 +766,8 @@ func main() {
 					log.Println("Too many communiaction errors, waiting 30 sec...")
 					time.Sleep(time.Second * 30)
 				}
-				i = -1
 			}
+			i = -1
 		}
 
 		time.Sleep(*retryInterval)
@@ -778,9 +787,13 @@ func main() {
 				}
 			} else {
 				log.Println("Attempt nr " + strconv.Itoa(i+1))
-				res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
+				skip, res, checkingID := CSDBPrepareData(*gobackID, *startingID, *date, *allTypes)
 				if res {
 					break
+				} else if skip {
+					log.Println("Skip entry with ID " + strconv.Itoa(checkingID))
+					checkingID++
+					config.LastID = checkingID
 				} else if i == 2 {
 					if checkingID > 0 {
 						log.Println("Too many errors with ID " + strconv.Itoa(checkingID))
@@ -790,8 +803,8 @@ func main() {
 						log.Println("Too many communiaction errors, waiting 30 sec...")
 						time.Sleep(time.Second * 30)
 					}
-					i = -1
 				}
+				i = -1
 			}
 
 			time.Sleep(*retryInterval)

@@ -17,6 +17,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -213,11 +214,19 @@ func fileExists(filename string) bool {
 }
 
 // SplitFTPURL ftp url into hostname and path components
-func SplitFTPURL(url string) (hostname, path string) {
-	trimPrefix := strings.TrimPrefix(url, "ftp://")
+func SplitFTPURL(downloadUrl string) (hostname, path string) {
+	trimPrefix := strings.TrimPrefix(downloadUrl, "ftp://")
 	splitIndex := strings.Index(trimPrefix, "/")
 	hostname = trimPrefix[:splitIndex]
 	path = trimPrefix[splitIndex:]
+
+	u, err := url.Parse(path)
+	// try to decode url
+	if err == nil {
+		// decoding worked, use decoded url
+		path = u.Path
+	}
+
 	return
 }
 

@@ -267,6 +267,9 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 		c, err := ftp.Dial(hostname+":21", ftp.DialWithTimeout(5*time.Second))
 
 		defer func() {
+			if c == nil {
+				return
+			}
 			if err := c.Quit(); err != nil {
 				log.Println("error closing ftp connection " + err.Error())
 			}

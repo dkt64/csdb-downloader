@@ -17,7 +17,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -213,6 +212,15 @@ func fileExists(filename string) bool {
 	return true
 }
 
+// SplitFTPURL ftp url into hostname and path components
+func SplitFTPURL(url string) (hostname, path string) {
+	trimPrefix := strings.TrimPrefix(url, "ftp://")
+	splitIndex := strings.Index(trimPrefix, "/")
+	hostname = trimPrefix[:splitIndex]
+	path = trimPrefix[splitIndex:]
+	return
+}
+
 // DownloadFile will download a url to a local file. It's efficient because it will
 // write as it downloads and not load the whole file into memory.
 // ================================================================================================
@@ -245,13 +253,9 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 	resultFileName := ""
 	if strings.HasPrefix(downloadUrl, "ftp://") {
 
-		u, err := url.Parse(downloadUrl)
-		if err != nil {
-			log.Println("error parsing url " + err.Error())
-			return err
-		}
+		hostname, path := SplitFTPURL(downloadUrl)
 
-		c, err := ftp.Dial(u.Host+":21", ftp.DialWithTimeout(5*time.Second))
+		c, err := ftp.Dial(hostname+":21", ftp.DialWithTimeout(5*time.Second))
 		if err != nil {
 			log.Println("error accessing ftp url " + err.Error())
 			return err
@@ -263,7 +267,7 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			return err
 		}
 
-		r, err := c.Retr(u.Path)
+		r, err := c.Retr(path)
 		if err != nil {
 			log.Println("error downloading file from ftp server " + err.Error())
 			return err
@@ -276,7 +280,7 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			return err
 		}
 
-		resultFileName = filepath.Base(u.Path)
+		resultFileName = filepath.Base(path)
 
 		if err := c.Quit(); err != nil {
 			log.Println("error closing ftp connection " + err.Error())

@@ -241,6 +241,7 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 
 	log.Println("Downloading new file " + downloadUrl)
 
+	resultFileName := ""
 	if strings.HasPrefix(downloadUrl, "ftp://") {
 
 		u, err := url.Parse(downloadUrl)
@@ -274,6 +275,8 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			return err
 		}
 
+		resultFileName = filepath.Base(u.Path)
+
 		if err := c.Quit(); err != nil {
 			log.Println("error closing ftp connection " + err.Error())
 			return err
@@ -298,53 +301,55 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			}
 		}
 
-		if ErrCheck(err) {
+		resultFileName = resp.Filename
+	}
 
-			log.Println("Writing to " + resp.Filename)
+	if ErrCheck(err) {
 
-			if strings.Contains(strings.ToLower(filename), ".zip") {
+		log.Println("Writing to " + resultFileName)
 
-				log.Println("Found ZIP file: " + filename)
+		if strings.Contains(strings.ToLower(filename), ".zip") {
 
-				zipReader, err := zip.OpenReader(filepathname)
-				if ErrCheck(err) {
-					defer zipReader.Close()
-					for _, file := range zipReader.File {
+			log.Println("Found ZIP file: " + filename)
 
-						if !file.FileInfo().IsDir() {
+			zipReader, err := zip.OpenReader(filepathname)
+			if ErrCheck(err) {
+				defer zipReader.Close()
+				for _, file := range zipReader.File {
 
-							log.Println("Extracting: " + file.Name)
+					if !file.FileInfo().IsDir() {
 
-							// Tutaj tylko jeden rodzaj slash'a
-							f := strings.ReplaceAll(file.Name, "\\", "/")
-							p := strings.ReplaceAll(path, "\\", "/")
+						log.Println("Extracting: " + file.Name)
 
-							outputFile, err := os.OpenFile(
-								p+"/"+f,
-								os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-								file.Mode(),
-							)
+						// Tutaj tylko jeden rodzaj slash'a
+						f := strings.ReplaceAll(file.Name, "\\", "/")
+						p := strings.ReplaceAll(path, "\\", "/")
+
+						outputFile, err := os.OpenFile(
+							p+"/"+f,
+							os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+							file.Mode(),
+						)
+						if ErrCheck(err) {
+							defer outputFile.Close()
+
+							// log.Println("Opening: " + file.Name)
+							// log.Println("Output: " + path + sep + file.Name)
+
+							zippedFile, err := file.Open()
 							if ErrCheck(err) {
-								defer outputFile.Close()
-
-								// log.Println("Opening: " + file.Name)
-								// log.Println("Output: " + path + sep + file.Name)
-
-								zippedFile, err := file.Open()
-								if ErrCheck(err) {
-									defer zippedFile.Close()
-									log.Println("Writing extracted file " + path + sep + file.Name)
-									_, err = io.Copy(outputFile, zippedFile)
-									ErrCheck(err)
-								}
+								defer zippedFile.Close()
+								log.Println("Writing extracted file " + path + sep + file.Name)
+								_, err = io.Copy(outputFile, zippedFile)
+								ErrCheck(err)
 							}
-						} else {
-							// Tutaj tylko jeden rodzaj slash'a
-							f := strings.ReplaceAll(file.Name, "\\", "/")
-							p := strings.ReplaceAll(path, "\\", "/")
-							os.MkdirAll(p+"/"+f, 0777)
-							os.Chmod(p+"/"+f, 0777)
 						}
+					} else {
+						// Tutaj tylko jeden rodzaj slash'a
+						f := strings.ReplaceAll(file.Name, "\\", "/")
+						p := strings.ReplaceAll(path, "\\", "/")
+						os.MkdirAll(p+"/"+f, 0777)
+						os.Chmod(p+"/"+f, 0777)
 					}
 				}
 			}

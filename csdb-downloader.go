@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"flag"
+	"fmt"
 	"github.com/jlaffaye/ftp"
 	"io"
 	"log"
@@ -372,7 +373,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 	parsedDate, _ := time.Parse("2006-01-02", date)
 
 	// pobranie ostatniego release'u
-	netClient := &http.Client{Timeout: time.Second * 5}
+	netClient := &http.Client{Timeout: time.Second * 10}
 	resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=0")
 
 	if ErrCheck(err) {
@@ -421,12 +422,18 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 		searching := true
 		for searching {
 
-			resp, err := netClient.Get("https://csdb.dk/webservice/?type=release&id=" + strconv.Itoa(checkingID))
+			releaseMetadataUrl := fmt.Sprintf("https://csdb.dk/webservice/?type=release&id=%d", checkingID)
+			resp, err := netClient.Get(releaseMetadataUrl)
 
 			if ErrCheck(err) {
 				defer resp.Body.Close()
 				body, err := io.ReadAll(resp.Body)
 				defer resp.Body.Close()
+
+				if !strings.HasPrefix(string(body), "<?xml") {
+					log.Printf("Received broken CSDbData xml from %s skipping entry.\n", releaseMetadataUrl)
+					return false, checkingID
+				}
 
 				if ErrCheck(err) {
 					resp.Body.Close()
@@ -672,6 +679,7 @@ func main() {
 	startingID := flag.Int("start", 0, "Force ID number to start from -> change of config.LastID")
 	date := flag.String("date", "", "Download only releases newer then date in form YYYY-MM-DD -> change of config.Date")
 	addID := flag.Bool("id", false, "Set to 'true' if you want to add id number to release folder name (default 'false') -> change of config.NameWithID")
+	retryInterval := flag.Duration("retry-after", time.Second*5, "Duration to wait before retrying to fetch metadata and files, defaults to 5s")
 
 	// scener := flag.Int("scener", 0, "Get all releases the scener contributed in (ID)")
 	scener := 0
@@ -744,6 +752,7 @@ func main() {
 					log.Println("Too many errors with ID " + strconv.Itoa(checkingID))
 					checkingID++
 					config.LastID = checkingID
+					WriteConfig()
 				} else {
 					log.Println("Too many communiaction errors, waiting 30 sec...")
 					time.Sleep(time.Second * 30)
@@ -752,7 +761,7 @@ func main() {
 			}
 		}
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(*retryInterval)
 	}
 	WriteConfig()
 
@@ -785,7 +794,7 @@ func main() {
 				}
 			}
 
-			time.Sleep(time.Second * 5)
+			time.Sleep(*retryInterval)
 		}
 
 		WriteConfig()

@@ -262,9 +262,16 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 	resultFileName := ""
 	if strings.HasPrefix(downloadUrl, "ftp://") {
 
-		hostname, path := SplitFTPURL(downloadUrl)
+		hostname, downloadPath := SplitFTPURL(downloadUrl)
 
 		c, err := ftp.Dial(hostname+":21", ftp.DialWithTimeout(5*time.Second))
+
+		defer func() {
+			if err := c.Quit(); err != nil {
+				log.Println("error closing ftp connection " + err.Error())
+			}
+		}()
+
 		if err != nil {
 			log.Println("error accessing ftp url " + err.Error())
 			return err
@@ -276,12 +283,17 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			return err
 		}
 
-		r, err := c.Retr(path)
+		err = c.ChangeDir(filepath.Dir(downloadPath))
+		if err != nil {
+			log.Println("error changing dir on ftp server " + err.Error())
+			return err
+		}
+
+		r, err := c.Retr(filepath.Base(downloadPath))
 		if err != nil {
 			log.Println("error downloading file from ftp server " + err.Error())
 			return err
 		}
-		defer r.Close()
 
 		out, _ := os.Create(filepathname)
 		if _, err := io.Copy(out, r); err != nil {
@@ -289,12 +301,7 @@ func DownloadFile(path string, filename string, downloadUrl string) error {
 			return err
 		}
 
-		resultFileName = filepath.Base(path)
-
-		if err := c.Quit(); err != nil {
-			log.Println("error closing ftp connection " + err.Error())
-			return err
-		}
+		resultFileName = filepath.Base(downloadPath)
 	} else {
 		if strings.Contains(filepathname, "%") {
 			filepathname = strings.ReplaceAll(filepathname, "%", "_")
@@ -564,7 +571,7 @@ func CSDBPrepareData(gobackID int, startingID int, date string, all bool) (bool,
 									// releases = append(releases, newRelease)
 									err := DownloadRelease(newRelease)
 									if !ErrCheck(err) {
-										return false, false, checkingID
+										return true, false, checkingID
 									}
 									config.LastID = checkingID
 									// Update konfiga (LastID) po każdym sprawdzeniu
